@@ -88,7 +88,7 @@
 	}
 }
 
-- (BOOL)_magicMatchesMachO:(unsigned long)magic {
+- (BOOL)_magicMatchesMachO:(uint32_t)magic {
 	return magic == MH_MAGIC_64 || magic == MH_CIGAM_64 || magic == FAT_MAGIC || magic == FAT_CIGAM;
 }
 

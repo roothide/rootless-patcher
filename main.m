@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "Headers/ScriptHandler.h"
 #import "Headers/DirectoryScanner.h"
+#import "Headers/MachOThinner.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -33,9 +34,12 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSArray<NSString *> *const plistFiles = [scanner plistFiles];
 		NSArray<NSString *> *const controlScriptFiles = [scanner controlScriptFiles];
 
+		NSDictionary *const thinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
+
 		printf("mach-o's: %s\n", [machOFiles description].UTF8String);
 		printf("plists: %s\n", [plistFiles description].UTF8String);
 		printf("control scripts: %s\n", [controlScriptFiles description].UTF8String);
+		printf("thinnedMachOs: %s\n", [thinnedMachOs description].UTF8String);
 
 		return 0;
 	}
