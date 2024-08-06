@@ -4,7 +4,7 @@
 
 @implementation ScriptHandler
 
-+ (BOOL)handleScriptForFile:(nonnull NSString *)file {
++ (BOOL)handleScriptForFile:(NSString *)file {
 	NSError *error;
 
 	NSFileManager *const fileManager = [NSFileManager defaultManager];

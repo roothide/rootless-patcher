@@ -4,7 +4,7 @@
 
 @implementation SpawnHandler
 
-+ (BOOL)spawnWithCommandPath:(nonnull NSString *)commandPath arguments:(nonnull NSArray<NSString *> *)arguments {
++ (BOOL)spawnWithCommandPath:(NSString *)commandPath arguments:(NSArray<NSString *> *)arguments {
 	pid_t pid;
 
 	const size_t arraySize = [arguments count];

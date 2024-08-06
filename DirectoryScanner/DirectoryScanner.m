@@ -7,7 +7,7 @@
 	NSString *_directory;
 }
 
-+ (instancetype)directoryScannerWithDirectory:(nonnull NSString *)directory {
++ (instancetype)directoryScannerWithDirectory:(NSString *)directory {
 	DirectoryScanner *const scanner = [DirectoryScanner new];
 
 	if (scanner) {
@@ -17,7 +17,7 @@
 	return scanner;
 }
 
-- (nullable NSArray<NSString *> *)machOFiles {
+- (NSArray<NSString *> *)machOFiles {
 	__weak typeof(self) weakSelf = self;
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
@@ -33,7 +33,7 @@
 	return [files count] ? files : nil;
 }
 
-- (nullable NSArray<NSString *> *)plistFiles {
+- (NSArray<NSString *> *)plistFiles {
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
 	[self _recursivelyScanDirectoryWithBlock:^(NSString *filePath) {
@@ -45,7 +45,7 @@
 	return [files count] ? files : nil;
 }
 
-- (nullable NSArray<NSString *> *)controlScriptFiles {
+- (NSArray<NSString *> *)controlScriptFiles {
 	__weak typeof(self) weakSelf = self;
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
