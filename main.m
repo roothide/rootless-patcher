@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import "Headers/ScriptHandler.h"
+#import "Headers/DirectoryScanner.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -24,8 +25,17 @@ int main(int argc, char *argv[], char *envp[]) {
 			return 1;
 		}
 
-		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"patch_%@", [debPath stringByDeletingPathExtension]]];
+		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]]];
 		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) return 1;
+
+		DirectoryScanner *const scanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
+		NSArray<NSString *> *const machOFiles = [scanner machOFiles];
+		NSArray<NSString *> *const plistFiles = [scanner plistFiles];
+		NSArray<NSString *> *const controlScriptFiles = [scanner controlScriptFiles];
+
+		printf("mach-o's: %s\n", [machOFiles description].UTF8String);
+		printf("plists: %s\n", [plistFiles description].UTF8String);
+		printf("control scripts: %s\n", [controlScriptFiles description].UTF8String);
 
 		return 0;
 	}
