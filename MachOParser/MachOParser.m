@@ -19,13 +19,13 @@
 	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
 
 	for (uint32_t i = 0; i < _header->ncmds; i++) {
-		struct segment_command_64 *cmd = (struct segment_command_64 *)lc;
+		struct segment_command_64 *segment = (struct segment_command_64 *)lc;
 
-		if (!strcmp(cmd->segname, segname.UTF8String)) {
-			return cmd;
+		if (!strcmp(segment->segname, segname.UTF8String)) {
+			return segment;
 		}
 
-		lc = (struct load_command *)(lc + lc->cmdsize);
+		lc = (struct load_command *)((uint64_t)lc + (uint64_t)lc->cmdsize);
 	}
 
 	return nil;
@@ -43,6 +43,24 @@
 	}
 
 	return nil;
+}
+
+- (uint64_t)vmEnd {
+	uint64_t vmEnd = 0;
+
+	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
+
+	for (uint32_t i = 0; i < _header->ncmds; i++) {
+		struct segment_command_64 *segment = (struct segment_command_64 *)lc;
+
+		if (segment->vmsize && vmEnd < segment->vmaddr + segment->vmsize) {
+			vmEnd = segment->vmaddr + segment->vmsize;
+		}
+
+		lc = (struct load_command *)((uint64_t)lc + (uint64_t)lc->cmdsize);
+	}
+
+	return vmEnd;
 }
 
 @end

@@ -3,6 +3,7 @@
 #import "Headers/DirectoryScanner.h"
 #import "Headers/MachOThinner.h"
 #import "Headers/StringScanner.h"
+#import "Headers/MachOModifier.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -46,14 +47,16 @@ int main(int argc, char *argv[], char *envp[]) {
 			return 1;
 		}
 
-		
 		for (NSString *machOKey in [allThinnedMachOs allKeys]) {
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:machOKey];
 
 			for (NSString *file in thinnedMachOs) {
 				StringScanner *const stringScanner = [StringScanner stringScannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
-				printf("%s stringMap: %s\n", file.UTF8String, stringMap.description.UTF8String);
+
+				MachOModifier *const modifier = [MachOModifier modifierWithFile:file];
+				NSData *const data = [modifier dataWithAddedSegment:@"__PATCH_ROOTLESS" withSection:@"__cstring" withStringMap:stringMap];
+				printf("%s stringMap: %s %p\n", file.UTF8String, stringMap.description.UTF8String, data);
 			}
 		}
 
