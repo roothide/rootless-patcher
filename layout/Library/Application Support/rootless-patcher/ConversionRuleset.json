@@ -1,0 +1,40 @@
+{
+	"Blacklist": [
+		"/System",
+		"/usr/lib/libobjc",
+		"/usr/lib/libc++",
+		"/usr/lib/libstdc++",
+		"/usr/lib/dyld",
+		"/usr/lib/libMobileGestalt.dylib",
+		"/usr/lib/system",
+		"/usr/lib/swift",
+		"/usr/lib/libswift",
+		"/usr/lib/libsql",
+		"/usr/lib/libz",
+		"/var/jb",
+		"/private/var/mobile/Library/Preferences/com.apple",
+		"/var/mobile/Library/Preferences",
+		"/var/mobile/Library/SpringBoard",
+		"/private/var/mobile/Library/SpringBoard",
+		"/var/mobile/Library/WebClips",
+		"/private/var/mobile/Library/WebClips",
+		"/Library/Wallpaper",
+		"/Library/Application Support/AggregateDictionary",
+		"/var/mobile/Library/Caches/com.apple",
+		"/var/checkra1n.dmg",
+		"/.palecursus_strapped",
+		"/odyssey",
+		"/taurine",
+		"/private/etc/apt/undecimus",
+		"/var/Liy/.procursus_strapped",
+		"/Library/Ringtones"
+	],
+	"SpecialCases": {
+		"private/var/mobile/Library/Preferences": "var/mobile/Library/Preferences",
+		"~": "~"
+	},
+	"Denylist": [
+		"https://",
+		"http://"
+	]
+}

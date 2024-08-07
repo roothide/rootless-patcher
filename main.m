@@ -2,6 +2,7 @@
 #import "Headers/ScriptHandler.h"
 #import "Headers/DirectoryScanner.h"
 #import "Headers/MachOThinner.h"
+#import "Headers/StringScanner.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -29,17 +30,32 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]]];
 		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) return 1;
 
-		DirectoryScanner *const scanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
-		NSArray<NSString *> *const machOFiles = [scanner machOFiles];
-		NSArray<NSString *> *const plistFiles = [scanner plistFiles];
-		NSArray<NSString *> *const controlScriptFiles = [scanner controlScriptFiles];
+		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
+		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
+		__unused NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
+		__unused NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
 
-		NSDictionary *const thinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
+		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
 
-		printf("mach-o's: %s\n", [machOFiles description].UTF8String);
-		printf("plists: %s\n", [plistFiles description].UTF8String);
-		printf("control scripts: %s\n", [controlScriptFiles description].UTF8String);
-		printf("thinnedMachOs: %s\n", [thinnedMachOs description].UTF8String);
+		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:@"/var/jb/Library/Application Support/rootless-patcher/ConversionRuleset.json"];
+
+		NSError *error;
+		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
+		if (error) {
+			printf("Could not find conversion ruleset.\n");
+			return 1;
+		}
+
+		
+		for (NSString *machOKey in [allThinnedMachOs allKeys]) {
+			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:machOKey];
+
+			for (NSString *file in thinnedMachOs) {
+				StringScanner *const stringScanner = [StringScanner stringScannerWithFile:file conversionRuleset:conversionRuleset];
+				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
+				printf("%s stringMap: %s\n", file.UTF8String, stringMap.description.UTF8String);
+			}
+		}
 
 		return 0;
 	}

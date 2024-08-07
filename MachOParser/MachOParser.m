@@ -1,0 +1,48 @@
+#import <Foundation/Foundation.h>
+#import "Headers/MachOParser.h"
+
+@implementation MachOParser {
+	struct mach_header_64 *_header;
+}
+
++ (MachOParser *)parserWithHeader:(struct mach_header_64 *)header {
+	MachOParser *const parser = [MachOParser new];
+
+	if (parser) {
+		parser->_header = header;
+	}
+
+	return parser;
+}
+
+- (struct segment_command_64 *)segmentWithName:(NSString *)segname {
+	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
+
+	for (uint32_t i = 0; i < _header->ncmds; i++) {
+		struct segment_command_64 *cmd = (struct segment_command_64 *)lc;
+
+		if (!strcmp(cmd->segname, segname.UTF8String)) {
+			return cmd;
+		}
+
+		lc = (struct load_command *)(lc + lc->cmdsize);
+	}
+
+	return nil;
+}
+
+- (struct section_64 *)sectionInSegment:(struct segment_command_64 *)segment withName:(NSString *)sectname {
+	struct section_64 *sect = (struct section_64 *)((uint64_t)segment + sizeof(struct segment_command_64));
+
+	for (uint32_t i = 0; i < segment->nsects; i++) {
+		if (!strcmp(sect->sectname, sectname.UTF8String)) {
+			return sect;
+		}
+
+		sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
+	}
+
+	return nil;
+}
+
+@end

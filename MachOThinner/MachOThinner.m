@@ -1,7 +1,7 @@
-#import <Foundation/Foundation.h>
-#import "Headers/MachOThinner.h"
 #import <mach-o/loader.h>
 #import <mach-o/fat.h>
+#import <Foundation/Foundation.h>
+#import "Headers/MachOThinner.h"
 
 @implementation MachOThinner
 

@@ -8,6 +8,6 @@
 - (nullable NSArray<NSString *> *)plistFiles;
 - (nullable NSArray<NSString *> *)controlScriptFiles;
 
-+ (nullable instancetype)new __attribute__((unavailable("Do not use +new, use +directoryScannerWithDirectory: instead")));
-- (nullable instancetype)init __attribute__((unavailable("Do not use -init, use +directoryScannerWithDirectory: instead")));
++ (nullable instancetype)new __attribute__((unavailable("Use +directoryScannerWithDirectory: instead")));
+- (nullable instancetype)init __attribute__((unavailable("Use +directoryScannerWithDirectory: instead")));
 @end
