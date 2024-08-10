@@ -4,6 +4,7 @@
 #import "Headers/MachOThinner.h"
 #import "Headers/StringScanner.h"
 #import "Headers/MachOModifier.h"
+#import "Headers/OldABIChecker.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -21,7 +22,9 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		NSString *const debPath = [NSString stringWithUTF8String:argv[1]];
 		BOOL isDirectory;
-		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) return 1;
+		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) {
+			return 1;
+		}
 
 		const BOOL handleScript = [ScriptHandler handleScriptForFile:debPath];
 		if (!handleScript) {
@@ -29,7 +32,9 @@ int main(int argc, char *argv[], char *envp[]) {
 		}
 
 		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]]];
-		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) return 1;
+		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) {
+			return 1;
+		}
 
 		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
@@ -47,10 +52,18 @@ int main(int argc, char *argv[], char *envp[]) {
 			return 1;
 		}
 
-		for (NSString *machOKey in [allThinnedMachOs allKeys]) {
-			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:machOKey];
+		BOOL containsOldABI = NO;
+
+		error = nil;
+		for (NSString *fatMachO in [allThinnedMachOs allKeys]) {
+			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {
+				NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
+				if (error) {
+					break;
+				}
+
 				StringScanner *const stringScanner = [StringScanner stringScannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
 
@@ -60,8 +73,20 @@ int main(int argc, char *argv[], char *envp[]) {
 
 				NSData *const data = [modifier data];
 				[data writeToFile:[[file stringByDeletingPathExtension] stringByAppendingString:@"1"] options:NSDataWritingAtomic error:nil];
+
+				if (!containsOldABI && [OldABIChecker containsOldABI:data]) {
+					containsOldABI = YES;
+				}
+
+				error = nil;
+				[fileManager setAttributes:fileAttributes ofItemAtPath:[[file stringByDeletingPathExtension] stringByAppendingString:@"1"] error:&error];
+				if (error) {
+					break;
+				}
 			}
 		}
+
+		printf("Contains old abi? %d\n", containsOldABI);
 
 		return 0;
 	}
