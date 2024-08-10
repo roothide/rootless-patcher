@@ -49,7 +49,7 @@
 
 	NSArray *const dirs = [string componentsSeparatedByString:@"/"];
 
-	if ([dirs count] == 2 && ([dirs[1] containsString:@"."] || [dirs[1] containsString:@"'"])) {
+	if ([dirs count] == 2 && ([dirs[0] containsString:@"."] || [dirs[0] containsString:@"'"])) {
 		return NO;
 	}
 

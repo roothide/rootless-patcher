@@ -16,7 +16,7 @@
 			const struct mach_header_64 *thinHeader = (const struct mach_header_64 *)(fatHeader + OSSwapBigToHostInt32(arch->offset));
 
 			if ((thinHeader->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
-				if ((thinHeader->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI) == 0x0) {
+				if (!(thinHeader->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI)) {
 					return YES;
 				} else {
 					return NO;
@@ -29,7 +29,7 @@
 		}
 	} else if (header->magic == MH_MAGIC_64 || header->magic == MH_CIGAM_64) {
 		if ((header->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
-			if ((header->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI) == 0x0) {
+			if (!(header->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI)) {
 				return YES;
 			} else {
 				return NO;

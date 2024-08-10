@@ -5,6 +5,7 @@
 #import "Headers/StringScanner.h"
 #import "Headers/MachOModifier.h"
 #import "Headers/OldABIChecker.h"
+#import "Headers/PlistHandler.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -38,7 +39,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
-		__unused NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
+		NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
 		__unused NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
 
 		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
@@ -59,6 +60,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {
+				// Fix perms for actual fat file not thinned
 				NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
 				if (error) {
 					break;
@@ -72,14 +74,14 @@ int main(int argc, char *argv[], char *envp[]) {
 				[modifier rebaseStringsWithStringMap:stringMap];
 
 				NSData *const data = [modifier data];
-				[data writeToFile:[[file stringByDeletingPathExtension] stringByAppendingString:@"1"] options:NSDataWritingAtomic error:nil];
+				[data writeToFile:file options:NSDataWritingAtomic error:nil];
 
 				if (!containsOldABI && [OldABIChecker containsOldABI:data]) {
 					containsOldABI = YES;
 				}
-
+				// Fix perms for actual fat file not thinned
 				error = nil;
-				[fileManager setAttributes:fileAttributes ofItemAtPath:[[file stringByDeletingPathExtension] stringByAppendingString:@"1"] error:&error];
+				[fileManager setAttributes:fileAttributes ofItemAtPath:file error:&error];
 				if (error) {
 					break;
 				}
@@ -87,6 +89,26 @@ int main(int argc, char *argv[], char *envp[]) {
 		}
 
 		printf("Contains old abi? %d\n", containsOldABI);
+
+		error = nil;
+		for (NSString *plist in plistFiles) {
+			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:plist error:&error];
+			if (error) {
+				break;
+			}
+
+			PlistHandler *const handler = [PlistHandler handlerWithPlistFile:plist];
+			[handler convertStringsUsingStringMap:conversionRuleset];
+
+			NSDictionary *const convertedPlist = [handler plistDictionary];
+			[convertedPlist writeToFile:plist atomically:YES];
+
+			error = nil;
+			[fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];
+			if (error) {
+				break;
+			}
+		}
 
 		return 0;
 	}
