@@ -6,7 +6,7 @@ export SYSROOT = $(THEOS)/sdks/MacOSX11.3.sdk/
 else ifeq ($(TARGET_OS), ios)
 
 export TARGET := iphone:clang:latest:15.0
-export ARCHS = arm64 arm64e
+export ARCHS = arm64
 
 export THEOS_PACKAGE_SCHEME=rootless
 

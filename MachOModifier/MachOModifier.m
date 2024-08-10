@@ -3,45 +3,49 @@
 #import <Foundation/Foundation.h>
 #import "Headers/MachOModifier.h"
 #import "Headers/MachOParser.h"
+#import "Headers/CodesignHandler.h"
+#import "Headers/StringPatcher.h"
 
 @implementation MachOModifier {
-	NSData *_fileData;
+	NSMutableData *_fileData;
 	MachOParser *_parser;
+	NSString *_filePath;
 }
 
 + (instancetype)modifierWithFile:(NSString *)file {
 	MachOModifier *const modifier = [MachOModifier new];
 
 	if (modifier) {
-		NSData *const data = [NSData dataWithContentsOfFile:file];
+		NSMutableData *const data = [NSMutableData dataWithContentsOfFile:file];
 
 		modifier->_fileData = data;
 		modifier->_parser = [MachOParser parserWithHeader:(struct mach_header_64 *)[data bytes]];
+		modifier->_filePath = file;
 	}
 
 	return modifier;
 }
 
-- (NSData *)dataWithAddedSegment:(NSString *)segname withSection:(NSString *)sectname withStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	NSMutableData *const data = [_fileData mutableCopy];
+- (void)addSegment:(NSString *)segname withSection:(NSString *)sectname withStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
+	struct mach_header_64 *header = (struct mach_header_64 *)[_parser header];
 
 	struct segment_command_64 *linkeditSegment = [_parser segmentWithName:@"__LINKEDIT"];
 	if (!linkeditSegment) {
-		return [data copy];
+		return;
 	}
 
 	const uint64_t vmEnd = [_parser vmEnd];
 
 	const NSRange linkeditRange = NSMakeRange(linkeditSegment->fileoff, linkeditSegment->filesize);
-	NSData *const linkeditData = [data subdataWithRange:linkeditRange];
-	[data replaceBytesInRange:linkeditRange withBytes:nil length:0];
+	NSData *const linkeditData = [_fileData subdataWithRange:linkeditRange];
+	[_fileData replaceBytesInRange:linkeditRange withBytes:nil length:0];
 
 	const struct segment_command_64 newSegment = {
 		.cmd = LC_SEGMENT_64,
 		.cmdsize = sizeof(struct segment_command_64) + sizeof(struct section_64),
 		.vmaddr = vmEnd,
 		.vmsize = PAGE_SIZE,
-		.fileoff = data.length,
+		.fileoff = _fileData.length,
 		.filesize = PAGE_SIZE,
 		.maxprot = VM_PROT_READ,
 		.initprot = VM_PROT_READ,
@@ -57,7 +61,7 @@
 		.align = 0,
 		.reloff = 0,
 		.nreloc = 0,
-		.flags = S_ATTR_PURE_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS,
+		.flags = S_REGULAR,
 		.reserved1 = 0,
 		.reserved2 = 0,
 		.reserved3 = 0
@@ -65,8 +69,6 @@
 
 	strncpy((char *)newSection.segname, segname.UTF8String, sizeof(newSection.segname));
 	strncpy((char *)newSection.sectname, sectname.UTF8String, sizeof(newSection.sectname));
-
-	struct mach_header_64 *header = (struct mach_header_64 *)[data mutableBytes];
 
 	uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
 
@@ -88,7 +90,7 @@
 	header->ncmds += 1;
 	header->sizeofcmds += newSegment.cmdsize;
 
-	linkeditSegment->fileoff = data.length + newSegment.filesize;
+	linkeditSegment->fileoff = _fileData.length + newSegment.filesize;
 	linkeditSegment->vmaddr = vmEnd + newSegment.vmsize;
 
 	free((void *)cmds);
@@ -98,27 +100,48 @@
 
 	unsigned char *codepage = (unsigned char *)malloc(newSegment.vmsize);
 	[self _addPatchedStringsFromStringMap:stringMap toCodepage:codepage];
-	[data appendBytes:codepage length:newSegment.vmsize];
+	[_fileData appendBytes:codepage length:newSegment.vmsize];
 	free((void *)codepage);
 
-	[data appendData:linkeditData];
+	[_fileData appendData:linkeditData];
 
 	if (chainedFixups) {
-		[self _fixChainedFixupsForData:data chainedFixups:chainedFixups linkeditSegment:linkeditSegment];
+		[self _fixChainedFixups:chainedFixups linkeditSegment:linkeditSegment];
+	}
+}
+
+- (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
+	StringPatcher *const patcher = [StringPatcher patcherWithData:_fileData];
+
+	const BOOL removedCodesign = [CodesignHandler removeCodesignFromFile:_filePath];
+	if (!removedCodesign) {
+		printf("Failed to remove code signature from file %s\n", _filePath.fileSystemRepresentation);
+		return;
 	}
 
-	return [data copy];
+	for (NSString *originalString in [stringMap allKeys]) {
+		NSString *patchedString = [stringMap objectForKey:originalString];
+		[patcher patchString:originalString toString:patchedString];
+	}
+
+	const BOOL addedCodesign = [CodesignHandler addCodesignToFile:_filePath];
+	if (!addedCodesign) {
+		printf("Failed to add code signature to file: %s\n", _filePath.fileSystemRepresentation);
+		return;
+	}
+
+	_fileData = [[patcher data] mutableCopy];
 }
 
 - (void)_addPatchedStringsFromStringMap:(NSDictionary<NSString *, NSString *> *)stringMap toCodepage:(unsigned char *)codepage {
 	const size_t stringCount = [[stringMap allKeys] count];
-
 	NSArray<NSString *> *const patchedStrings = [stringMap allValues];
-
 	uint32_t offset = 0;
-	for (size_t i = 0; i < stringCount; i++) {
-		strcpy((char *)codepage + offset, [patchedStrings[i] UTF8String]);
-		offset += [patchedStrings[i] length];
+
+	for (int i = 0; i < stringCount; i++) {
+		const char *string = [patchedStrings[i] UTF8String];
+		strcpy((char *)codepage + offset, string);
+		offset += strlen(string) + 1;
 	}
 }
 
@@ -184,8 +207,8 @@
 	}
 }
 
-- (void)_fixChainedFixupsForData:(NSMutableData *)data chainedFixups:(struct linkedit_data_command *)chainedFixups linkeditSegment:(struct segment_command_64 *)linkeditSegment {
-	struct mach_header_64 *header = (struct mach_header_64 *)[data mutableBytes];
+- (void)_fixChainedFixups:(struct linkedit_data_command *)chainedFixups linkeditSegment:(struct segment_command_64 *)linkeditSegment {
+	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData mutableBytes];
 
 	const uint32_t offsetInLinkedit = (uint32_t)chainedFixups->dataoff - (uint32_t)linkeditSegment->fileoff;
 	const uintptr_t linkeditStartAddress = (uint64_t)header + linkeditSegment->fileoff;
@@ -201,25 +224,30 @@
 	*startsInfoNew = *startsInfo;
 	startsInfoNew->seg_count += 2;
 
-	for (uint32_t i = 0; i < startsInfoNew->seg_count; i++) {
-		uint32_t segmentInfoOffset = startsInfo->seg_info_offset[i];
+	for (uint32_t i = 0; i < startsInfo->seg_count; i++) {
+		const uint32_t segmentInfoOffset = startsInfo->seg_info_offset[i];
 		if (!segmentInfoOffset) continue;
 
 		startsInfoNew->seg_info_offset[i] = (uint32_t)[append length];
 
-		const struct dyld_chained_starts_in_segment *segmentInfo = (const struct dyld_chained_starts_in_segment *)((uint8_t *)startsInfo + segmentInfoOffset);
+		const struct dyld_chained_starts_in_segment *segmentInfo = (struct dyld_chained_starts_in_segment *)((uint8_t *)startsInfo + segmentInfoOffset);
 
-		size_t segmentInfoSize = sizeof(struct dyld_chained_starts_in_segment);
+		int segmentInfoSize = sizeof(struct dyld_chained_starts_in_segment);
+
 		if (segmentInfo->page_count) {
-			segmentInfoSize = sizeof(segmentInfo->page_start) * (segmentInfo->page_count - 1);
+			segmentInfoSize += sizeof(segmentInfo->page_start) * (segmentInfo->page_count - 1);
 		}
 
 		[append appendBytes:segmentInfo length:segmentInfoSize];
 	}
 
-	[data appendData:append];
+	[_fileData appendData:append];
 	linkeditSegment->filesize += [append length];
 	linkeditSegment->vmsize += ([append length] + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
+}
+
+- (NSData *)data {
+	return [_fileData copy];
 }
 
 @end

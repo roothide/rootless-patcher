@@ -55,8 +55,11 @@ int main(int argc, char *argv[], char *envp[]) {
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
 
 				MachOModifier *const modifier = [MachOModifier modifierWithFile:file];
-				NSData *const data = [modifier dataWithAddedSegment:@"__PATCH_ROOTLESS" withSection:@"__cstring" withStringMap:stringMap];
-				printf("%s stringMap: %s %p\n", file.UTF8String, stringMap.description.UTF8String, data);
+				[modifier addSegment:@"__PATCH_ROOTLESS" withSection:@"__cstring" withStringMap:stringMap];
+				[modifier rebaseStringsWithStringMap:stringMap];
+
+				NSData *const data = [modifier data];
+				[data writeToFile:[[file stringByDeletingPathExtension] stringByAppendingString:@"1"] options:NSDataWritingAtomic error:nil];
 			}
 		}
 

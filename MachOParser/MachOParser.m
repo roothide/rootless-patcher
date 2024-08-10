@@ -19,10 +19,12 @@
 	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
 
 	for (uint32_t i = 0; i < _header->ncmds; i++) {
-		struct segment_command_64 *segment = (struct segment_command_64 *)lc;
+		if (lc->cmd == LC_SEGMENT_64) {
+			struct segment_command_64 *segment = (struct segment_command_64 *)lc;
 
-		if (!strcmp(segment->segname, segname.UTF8String)) {
-			return segment;
+			if (!strcmp(segment->segname, segname.UTF8String)) {
+				return segment;
+			}
 		}
 
 		lc = (struct load_command *)((uint64_t)lc + (uint64_t)lc->cmdsize);
@@ -32,9 +34,12 @@
 }
 
 - (struct section_64 *)sectionInSegment:(struct segment_command_64 *)segment withName:(NSString *)sectname {
+	if (!segment) return nil;
+
 	struct section_64 *sect = (struct section_64 *)((uint64_t)segment + sizeof(struct segment_command_64));
 
 	for (uint32_t i = 0; i < segment->nsects; i++) {
+
 		if (!strcmp(sect->sectname, sectname.UTF8String)) {
 			return sect;
 		}
@@ -51,16 +56,22 @@
 	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
 
 	for (uint32_t i = 0; i < _header->ncmds; i++) {
-		struct segment_command_64 *segment = (struct segment_command_64 *)lc;
+		if (lc->cmd == LC_SEGMENT_64) {
+			struct segment_command_64 *segment = (struct segment_command_64 *)lc;
 
-		if (segment->vmsize && vmEnd < segment->vmaddr + segment->vmsize) {
-			vmEnd = segment->vmaddr + segment->vmsize;
+			if (segment->vmsize && vmEnd < segment->vmaddr + segment->vmsize) {
+				vmEnd = segment->vmaddr + segment->vmsize;
+			}
 		}
 
 		lc = (struct load_command *)((uint64_t)lc + (uint64_t)lc->cmdsize);
 	}
 
-	return vmEnd;
+    return vmEnd;
+}
+
+- (struct mach_header_64 *)header {
+	return _header;
 }
 
 @end
