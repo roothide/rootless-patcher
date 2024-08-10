@@ -56,7 +56,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		BOOL containsOldABI = NO;
 
 		error = nil;
-		for (NSString *fatMachO in [allThinnedMachOs allKeys]) {
+		for (NSString *fatMachO in allThinnedMachOs) {
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {

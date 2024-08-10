@@ -41,7 +41,7 @@
 		}
 	}
 
-	for (NSString *specialCase in [_specialCases allKeys]) {
+	for (NSString *specialCase in _specialCases) {
 		if ([standardizedString containsString:specialCase]) {
 			return YES;
 		}
@@ -59,7 +59,7 @@
 - (NSString *)convertedStringForString:(NSString *)string {
 	NSString *convertedString = string;
 
-	for (NSString *specialCase in [_specialCases allKeys]) {
+	for (NSString *specialCase in _specialCases) {
 		if ([string containsString:specialCase]) {
 			convertedString = [convertedString stringByReplacingOccurrencesOfString:specialCase withString:[_specialCases valueForKey:specialCase]];
 		}

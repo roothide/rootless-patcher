@@ -119,7 +119,7 @@
 		return;
 	}
 
-	for (NSString *originalString in [stringMap allKeys]) {
+	for (NSString *originalString in stringMap) {
 		NSString *patchedString = [stringMap objectForKey:originalString];
 		[patcher patchString:originalString toString:patchedString];
 	}
@@ -134,10 +134,10 @@
 }
 
 - (void)_addPatchedStringsFromStringMap:(NSDictionary<NSString *, NSString *> *)stringMap toCodepage:(unsigned char *)codepage {
-	const size_t stringCount = [[stringMap allKeys] count];
 	NSArray<NSString *> *const patchedStrings = [stringMap allValues];
 	uint32_t offset = 0;
 
+	const size_t stringCount = [stringMap count];
 	for (int i = 0; i < stringCount; i++) {
 		const char *string = [patchedStrings[i] UTF8String];
 		strcpy((char *)codepage + offset, string);
