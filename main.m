@@ -6,6 +6,7 @@
 #import "Headers/MachOModifier.h"
 #import "Headers/OldABIChecker.h"
 #import "Headers/PlistHandler.h"
+#import "Headers/ControlScriptHandler.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -40,7 +41,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
 		NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
-		__unused NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
+		NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
 
 		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
 
@@ -105,6 +106,30 @@ int main(int argc, char *argv[], char *envp[]) {
 
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];
+			if (error) {
+				break;
+			}
+		}
+
+		error = nil;
+		for (NSString *controlScriptFile in controlScriptFiles) {
+			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlScriptFile error:&error];
+			if (error) {
+				break;
+			}
+
+			ControlScriptHandler *const handler = [ControlScriptHandler handlerWithControlScriptFile:controlScriptFile];
+			[handler convertStringsUsingStringMap:conversionRuleset];
+
+			error = nil;
+			NSString *const convertedFileContents = [handler fileContents];
+			[convertedFileContents writeToFile:controlScriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+			if (error) {
+				break;
+			}
+
+			error = nil;
+			[fileManager setAttributes:fileAttributes ofItemAtPath:controlScriptFile error:&error];
 			if (error) {
 				break;
 			}
