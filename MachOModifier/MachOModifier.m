@@ -3,7 +3,6 @@
 #import <Foundation/Foundation.h>
 #import "Headers/MachOModifier.h"
 #import "Headers/MachOParser.h"
-#import "Headers/CodesignHandler.h"
 #import "Headers/StringPatcher.h"
 
 @implementation MachOModifier {
@@ -113,21 +112,9 @@
 - (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
 	StringPatcher *const patcher = [StringPatcher patcherWithData:_fileData];
 
-	const BOOL removedCodesign = [CodesignHandler removeCodesignFromFile:_filePath];
-	if (!removedCodesign) {
-		printf("Failed to remove code signature from file %s\n", _filePath.fileSystemRepresentation);
-		return;
-	}
-
 	for (NSString *originalString in stringMap) {
 		NSString *patchedString = [stringMap objectForKey:originalString];
 		[patcher patchString:originalString toString:patchedString];
-	}
-
-	const BOOL addedCodesign = [CodesignHandler addCodesignToFile:_filePath];
-	if (!addedCodesign) {
-		printf("Failed to add code signature to file: %s\n", _filePath.fileSystemRepresentation);
-		return;
 	}
 
 	_fileData = [[patcher data] mutableCopy];

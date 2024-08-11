@@ -8,6 +8,7 @@
 #import "Headers/PlistHandler.h"
 #import "Headers/ControlScriptHandler.h"
 #import "Headers/ControlParser.h"
+#import "Headers/CodesignHandler.h"
 #import "Headers/MachOMerger.h"
 #import "Headers/SpawnHandler.h"
 
@@ -91,6 +92,12 @@ int main(int argc, char *argv[], char *envp[]) {
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:fatMachO error:&error];
 			if (error) {
+				break;
+			}
+
+			const BOOL addedCodesign = [CodesignHandler addCodesignToFile:fatMachO];
+			if (!addedCodesign) {
+				printf("Failed to add code signature to file: %s\n", fatMachO.fileSystemRepresentation);
 				break;
 			}
 
