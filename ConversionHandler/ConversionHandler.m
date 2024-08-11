@@ -20,12 +20,6 @@
 }
 
 - (BOOL)shouldConvertString:(NSString *)string {
-	for (NSString *denyString in _denylist) {
-		if ([string containsString:denyString]) {
-			return NO;
-		}
-	}
-
 	NSString *const standardizedString = [string stringByStandardizingPath];
 
 	if ([standardizedString length] <= 1 ||
@@ -49,8 +43,18 @@
 
 	NSArray *const dirs = [string componentsSeparatedByString:@"/"];
 
-	if ([dirs count] == 2 && ([dirs[0] containsString:@"."] || [dirs[0] containsString:@"'"])) {
+	if ([dirs count] == 2 && ([dirs[0] containsString:@"."] || [dirs[0] containsString:@"'"] || [dirs[0] length] < 3)) {
 		return NO;
+	}
+
+	if ([string hasPrefix:@"file://"]) {
+		return YES;
+	}
+
+	for (NSString *denyString in _denylist) {
+		if ([string containsString:denyString]) {
+			return NO;
+		}
 	}
 
 	return YES;
