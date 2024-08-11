@@ -9,6 +9,7 @@
 #import "Headers/ControlScriptHandler.h"
 #import "Headers/ControlParser.h"
 #import "Headers/MachOMerger.h"
+#import "Headers/SpawnHandler.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -116,6 +117,9 @@ int main(int argc, char *argv[], char *envp[]) {
 			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
 		}
 
+		NSString *const packageID = [controlParser controlValueForKey:@"Package"];
+		NSString *const packageVersion = [controlParser controlValueForKey:@"Version"];
+
 		error = nil;
 		[[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 		if (error) {
@@ -170,6 +174,15 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 		}
+
+		NSString *const newPath = [[patchWorkingDirectory stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
+
+		[SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/dpkg-deb" arguments:@[
+			@"dpkg-deb",
+			@"-b",
+			patchWorkingDirectory,
+			newPath
+		]];
 
 		return 0;
 	}
