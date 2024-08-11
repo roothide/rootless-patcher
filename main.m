@@ -175,7 +175,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			}
 		}
 
-		NSString *const newPath = [[patchWorkingDirectory stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
+		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
 		[SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/dpkg-deb" arguments:@[
 			@"dpkg-deb",
@@ -183,6 +183,13 @@ int main(int argc, char *argv[], char *envp[]) {
 			patchWorkingDirectory,
 			newPath
 		]];
+
+		error = nil;
+		[fileManager removeItemAtPath:patchWorkingDirectory error:&error];
+		if (error) {
+			printf("Error removing patch directory.\n");
+			return 1;
+		}
 
 		return 0;
 	}
