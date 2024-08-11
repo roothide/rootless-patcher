@@ -7,6 +7,7 @@
 #import "Headers/OldABIChecker.h"
 #import "Headers/PlistHandler.h"
 #import "Headers/ControlScriptHandler.h"
+#import "Headers/ControlParser.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -42,6 +43,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
 		NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
 		NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
+		NSString *const controlFile = [directoryScanner controlFile];
 
 		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
 
@@ -90,6 +92,30 @@ int main(int argc, char *argv[], char *envp[]) {
 		}
 
 		printf("Contains old abi? %d\n", containsOldABI);
+		error = nil;
+
+		NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlFile error:&error];
+		if (error) {
+			return 1;
+		}
+
+		ControlParser *const controlParser = [ControlParser parserWithControlFile:controlFile];
+		if (containsOldABI) {
+			NSMutableArray *const dependencies = [controlParser controlValueForKey:@"Depends"];
+			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
+		}
+
+		error = nil;
+		[[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+		if (error) {
+			return 1;
+		}
+
+		error = nil;
+		[fileManager setAttributes:fileAttributes ofItemAtPath:controlFile error:&error];
+		if (error) {
+			return 1;
+		}
 
 		error = nil;
 		for (NSString *plist in plistFiles) {
@@ -101,8 +127,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			PlistHandler *const handler = [PlistHandler handlerWithPlistFile:plist];
 			[handler convertStringsUsingStringMap:conversionRuleset];
 
-			NSDictionary *const convertedPlist = [handler plistDictionary];
-			[convertedPlist writeToFile:plist atomically:YES];
+			[[handler plistDictionary] writeToFile:plist atomically:YES];
 
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];

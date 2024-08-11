@@ -21,7 +21,7 @@
 	__weak typeof(self) weakSelf = self;
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
-	[self _recursivelyScanDirectoryWithBlock:^(NSString *filePath) {
+	[self _recursivelyScanDirectory:_directory withBlock:^(NSString *filePath) {
 		NSData *const data = [NSData dataWithContentsOfFile:filePath];
 
 		const struct mach_header_64 *header = (const struct mach_header_64 *)[data bytes];
@@ -36,7 +36,7 @@
 - (NSArray<NSString *> *)plistFiles {
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
-	[self _recursivelyScanDirectoryWithBlock:^(NSString *filePath) {
+	[self _recursivelyScanDirectory:_directory withBlock:^(NSString *filePath) {
 		if ([[filePath pathExtension] isEqualToString:@"plist"]) {
 			[files addObject:filePath];
 		}
@@ -51,7 +51,7 @@
 
 	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv"];
 
-	[self _recursivelyScanDirectoryWithBlock:^(NSString *filePath) {
+	[self _recursivelyScanDirectory:[_directory stringByAppendingPathComponent:@"DEBIAN"] withBlock:^(NSString *filePath) {
 		if ([controlScriptNames containsObject:[filePath lastPathComponent]]) {
 			NSData *const data = [NSData dataWithContentsOfFile:filePath];
 
@@ -66,18 +66,22 @@
 	return [files count] ? files : nil;
 }
 
-- (void)_recursivelyScanDirectoryWithBlock:(void (^)(NSString *))block {
+- (nullable NSString *)controlFile {
+	return [[_directory stringByAppendingPathComponent:@"DEBIAN"] stringByAppendingPathComponent:@"control"];
+}
+
+- (void)_recursivelyScanDirectory:(NSString *)directory withBlock:(void (^)(NSString *))block {
 	NSFileManager *const fileManager = [NSFileManager defaultManager];
 
 	NSError *error;
-	NSArray *const subpaths = [fileManager subpathsOfDirectoryAtPath:_directory error:&error];
+	NSArray *const subpaths = [fileManager subpathsOfDirectoryAtPath:directory error:&error];
 	if (error) {
 		printf("Failed to get subpaths of directory.\n");
 		return;
 	}
 
 	for (NSString *subpath in subpaths) {
-		NSString *const fullPath = [_directory stringByAppendingPathComponent:subpath];
+		NSString *const fullPath = [directory stringByAppendingPathComponent:subpath];
 
 		BOOL isDirectory;
 		[fileManager fileExistsAtPath:fullPath isDirectory:&isDirectory];

@@ -7,6 +7,7 @@
 - (nullable NSArray<NSString *> *)machOFiles;
 - (nullable NSArray<NSString *> *)plistFiles;
 - (nullable NSArray<NSString *> *)controlScriptFiles;
+- (nullable NSString *)controlFile;
 
 + (nullable instancetype)new __attribute__((unavailable("Use +directoryScannerWithDirectory: instead")));
 - (nullable instancetype)init __attribute__((unavailable("Use +directoryScannerWithDirectory: instead")));
