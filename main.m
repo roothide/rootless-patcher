@@ -8,6 +8,7 @@
 #import "Headers/PlistHandler.h"
 #import "Headers/ControlScriptHandler.h"
 #import "Headers/ControlParser.h"
+#import "Headers/MachOMerger.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -63,12 +64,6 @@ int main(int argc, char *argv[], char *envp[]) {
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {
-				// Fix perms for actual fat file not thinned
-				NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
-				if (error) {
-					break;
-				}
-
 				StringScanner *const stringScanner = [StringScanner stringScannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
 
@@ -82,9 +77,25 @@ int main(int argc, char *argv[], char *envp[]) {
 				if (!containsOldABI && [OldABIChecker containsOldABI:data]) {
 					containsOldABI = YES;
 				}
-				// Fix perms for actual fat file not thinned
+			}
+
+			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
+
+			const BOOL successfullyMerged = [MachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
+			if (!successfullyMerged) {
+				printf("Failed to merge Mach-O's!\n");
+				break;
+			}
+
+			error = nil;
+			[fileManager setAttributes:fileAttributes ofItemAtPath:fatMachO error:&error];
+			if (error) {
+				break;
+			}
+
+			for (NSString *file in thinnedMachOs) {
 				error = nil;
-				[fileManager setAttributes:fileAttributes ofItemAtPath:file error:&error];
+				[fileManager removeItemAtPath:file error:&error];
 				if (error) {
 					break;
 				}
