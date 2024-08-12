@@ -146,7 +146,6 @@
 			struct dyld_info_command *dyldInfoCommand = (struct dyld_info_command *)lc;
 
 			dyldInfoCommand->rebase_off += fixOffset;
-			dyldInfoCommand->bind_off += fixOffset;
 
 			if (dyldInfoCommand->bind_off) dyldInfoCommand->bind_off += fixOffset;
 			if (dyldInfoCommand->lazy_bind_off) dyldInfoCommand->lazy_bind_off += fixOffset;
@@ -187,7 +186,6 @@
 			}
 
 			if (dataCommand->dataoff) dataCommand->dataoff += fixOffset;
-
 		}
 
 		lc = (struct load_command *)((uint64_t)lc + (uint64_t)lc->cmdsize);

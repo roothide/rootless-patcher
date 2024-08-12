@@ -77,7 +77,7 @@ struct __CFString {
 		[self _patchCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress - IMAGE_BASE];
 
 		if (_globalTableSection) {
-			[self _patchGlobalCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress - IMAGE_BASE];
+			[self _patchGlobalCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress];
 		}
 	}
 }
@@ -105,7 +105,7 @@ struct __CFString {
 		uint64_t reference = OSSwapLittleToHostInt64(*(uint64_t *)(buffer + tableAddress + i));
 		if ((uint32_t)reference == (uint32_t)originalAddress) {
 			printf(" | global cstring\n");
-            *(uint64_t *)(&reference) = OSSwapHostToLittleInt64(replacementAddress);
+            *(uint64_t *)(buffer + tableAddress + i) = OSSwapHostToLittleInt64(replacementAddress);
 		}
 	}
 }
