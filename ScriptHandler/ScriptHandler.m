@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <rootless.h>
 #import "Headers/ScriptHandler.h"
 #import "Headers/SpawnHandler.h"
 
@@ -37,9 +38,11 @@
 		return NO;
 	}
 
-	const BOOL scriptSucceeded = [SpawnHandler spawnWithCommandPath:@"/var/jb/bin/sh" arguments:@[
+	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
+
+	const BOOL scriptSucceeded = [SpawnHandler spawnWithArguments:@[
 		@"sh",
-		@"/var/jb/Library/Application Support/rootless-patcher/repack-rootless.sh",
+		scriptPath,
 		temporaryDebPath
 	]];
 

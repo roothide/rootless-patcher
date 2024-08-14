@@ -12,7 +12,7 @@
 	[args addObject:outputPath];
 	[args addObject:@"-create"];
 
-	return [SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/lipo" arguments:args];
+	return [SpawnHandler spawnWithArguments:args];
 }
 
 @end

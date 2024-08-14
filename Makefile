@@ -1,14 +1,13 @@
 ifeq ($(TARGET_OS), macos)
 
-export TARGET := macosx:clang:latest:latest
-export SYSROOT = $(THEOS)/sdks/MacOSX11.3.sdk/
+TARGET := macosx:clang:11.3:11.0
 
 else ifeq ($(TARGET_OS), ios)
 
-export TARGET := iphone:clang:latest:15.0
-export ARCHS = arm64
+TARGET := iphone:clang:latest:15.0
+ARCHS = arm64
 
-export THEOS_PACKAGE_SCHEME=rootless
+THEOS_PACKAGE_SCHEME=rootless
 
 endif
 

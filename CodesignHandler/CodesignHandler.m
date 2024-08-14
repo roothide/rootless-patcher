@@ -5,7 +5,7 @@
 @implementation CodesignHandler
 
 + (BOOL)removeCodesignFromFile:(NSString *)file {
-	return [SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/ldid" arguments:@[
+	return [SpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-r",
 		file
@@ -13,7 +13,7 @@
 }
 
 + (BOOL)addCodesignToFile:(NSString *)file {
-	return [SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/ldid" arguments:@[
+	return [SpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-S",
 		file

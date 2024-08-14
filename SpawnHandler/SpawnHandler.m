@@ -4,7 +4,8 @@
 
 @implementation SpawnHandler
 
-+ (BOOL)spawnWithCommandPath:(NSString *)commandPath arguments:(NSArray<NSString *> *)arguments {
++ (BOOL)spawnWithArguments:(NSArray<NSString *> *)arguments {
+	extern char **environ;
 	pid_t pid;
 
 	const size_t arraySize = [arguments count];
@@ -15,7 +16,7 @@
 	}
 	argumentsC[arraySize] = NULL;
 
-	int status = posix_spawn(&pid, [commandPath fileSystemRepresentation], NULL, NULL, (char *const *)argumentsC, NULL);
+	int status = posix_spawnp(&pid, argumentsC[0], NULL, NULL, (char *const *)argumentsC, environ);
 	free((void *)argumentsC);
 
 	waitpid(pid, NULL, 0);

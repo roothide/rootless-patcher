@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <rootless.h>
 #import "Headers/ScriptHandler.h"
 #import "Headers/DirectoryScanner.h"
 #import "Headers/MachOThinner.h"
@@ -50,7 +51,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
 
-		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:@"/var/jb/Library/Application Support/rootless-patcher/ConversionRuleset.json"];
+		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json")];
 
 		NSError *error;
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
@@ -184,7 +185,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
-		[SpawnHandler spawnWithCommandPath:@"/var/jb/usr/bin/dpkg-deb" arguments:@[
+		[SpawnHandler spawnWithArguments:@[
 			@"dpkg-deb",
 			@"-b",
 			patchWorkingDirectory,
@@ -195,6 +196,14 @@ int main(int argc, char *argv[], char *envp[]) {
 		[fileManager removeItemAtPath:patchWorkingDirectory error:&error];
 		if (error) {
 			printf("Error removing patch directory.\n");
+			return 1;
+		}
+
+		NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:[debPath lastPathComponent]];
+		error = nil;
+		[fileManager removeItemAtPath:temporaryDebPath error:&error];
+		if (error) {
+			printf("Error removing temporary .deb path.\n");
 			return 1;
 		}
 
