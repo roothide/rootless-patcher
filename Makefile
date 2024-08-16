@@ -15,7 +15,7 @@ include $(THEOS)/makefiles/common.mk
 
 TOOL_NAME = rootless-patcher
 
-rootless-patcher_FILES = $(shell find . -type f -name '*.m') $(shell find . -type f -name '*.c')
+rootless-patcher_FILES = main.m src/assembler.c $(shell find ./src -type f -name '*.m')
 rootless-patcher_CFLAGS = -fobjc-arc
 
 ifeq ($(TARGET_OS), ios)
