@@ -21,7 +21,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			fprintf(stdout, "rootless-patcher <path/to/binary>\n");
 			fprintf(stdout, "\n");
 
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		fprintf(stdout, "\n[+] Starting rootless-patcher...\n\n");
@@ -33,20 +33,20 @@ int main(int argc, char *argv[], char *envp[]) {
 		BOOL isDirectory;
 		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) {
 			fprintf(stderr, "[-] Cannot find file at path: %s\n", debPath.fileSystemRepresentation);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		const BOOL handleScript = [ScriptHandler handleScriptForFile:debPath];
 		if (!handleScript) {
 			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		NSString *const patchWorkingDirectoryPath = [NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]];
 		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:patchWorkingDirectoryPath];
 		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) {
 			fprintf(stderr, "[-] Patch working directory does not exist at path: %s\n", patchWorkingDirectoryPath.fileSystemRepresentation);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
@@ -64,7 +64,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Could not find ConversionRuleset.json at path: %s. Error: %s\n", conversionRulesetPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		fprintf(stdout, "[+] Starting string conversion portion...\n");
@@ -137,7 +137,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlFile error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Failed to get file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		ControlParser *const controlParser = [ControlParser parserWithControlFile:controlFile];
@@ -153,14 +153,14 @@ int main(int argc, char *argv[], char *envp[]) {
 		[[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		error = nil;
 		[fileManager setAttributes:fileAttributes ofItemAtPath:controlFile error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Failed to set file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		fprintf(stdout, "[+] Finishing control file portion...\n");
@@ -219,7 +219,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			}
 		}
 
-		fprintf(stdout, "[+] Finishing control script file portion...\n");
+		fprintf(stdout, "[+] Finishing control file portion...\n");
 
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
@@ -238,7 +238,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		[fileManager removeItemAtPath:patchWorkingDirectory error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Error removing patch working directory: %s. Error: %s\n", patchWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:[debPath lastPathComponent]];
@@ -246,11 +246,11 @@ int main(int argc, char *argv[], char *envp[]) {
 		[fileManager removeItemAtPath:temporaryDebPath error:&error];
 		if (error) {
 			fprintf(stderr, "[-] Error removing temporary .deb path: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return 1;
+			return EXIT_FAILURE;
 		}
 
 		fprintf(stdout, "\n[+] Done! New .deb path: %s\n\n", newPath.fileSystemRepresentation);
 
-		return 0;
+		return EXIT_SUCCESS;
 	}
 }
