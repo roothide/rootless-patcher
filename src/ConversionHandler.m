@@ -73,9 +73,9 @@
 	if ([string hasPrefix:@"file://"]) {
 		return [@"file:///var/jb" stringByAppendingString:[self _string:string byStrippingPrefix:@"file://"]];
 	} else if ([string hasPrefix:@"/"]) {
-		return [@"/var/jb" stringByAppendingPathComponent:convertedString];
+		return [@"/var/jb" stringByAppendingString:convertedString];
 	} else {
-		return [@"var/jb" stringByAppendingPathComponent:convertedString];
+		return [@"var/jb" stringByAppendingString:convertedString];
 	}
 }
 
