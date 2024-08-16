@@ -4,7 +4,7 @@
 @implementation ConversionHandler {
 	NSArray *_blacklist;
 	NSDictionary *_specialCases;
-	NSArray *_denylist;
+	NSArray *_bootstrapList;
 }
 
 + (instancetype)handlerWithConversionRuleset:(NSDictionary *)conversionRuleset {
@@ -13,48 +13,49 @@
 	if (handler) {
 		handler->_blacklist = [conversionRuleset objectForKey:@"Blacklist"];
 		handler->_specialCases = [conversionRuleset objectForKey:@"SpecialCases"];
-		handler->_denylist = [conversionRuleset objectForKey:@"Denylist"];
+		handler->_bootstrapList = @[@"Applications", @"bin", @"boot", @"dev", @"etc", @"lib", @"Library", @"mnt", @"sbin", @"tmp", @"User", @"usr", @"var"];
 	}
 
 	return handler;
 }
 
 - (BOOL)shouldConvertString:(NSString *)string {
-	NSString *const standardizedString = [string stringByStandardizingPath];
+	if ([string length] == 0) {
+		return NO;
+	}
 
-	if ([standardizedString length] <= 1 ||
-		[standardizedString containsString:@"?"] ||
-		(![standardizedString hasPrefix:@"/"] &&
-		(![standardizedString containsString:@"/"]))) {
+	NSArray *const pathComponents = [string pathComponents];
+	if (!pathComponents || [pathComponents count] == 1) {
+		return NO;
+	}
+
+	NSString *firstPathComponent = pathComponents.firstObject;
+
+	for (NSString *pathComponent in pathComponents) {
+		if (![pathComponent isEqualToString:@"/"]) {
+			firstPathComponent = pathComponent;
+			break;
+		}
+	}
+
+	if (![_bootstrapList containsObject:firstPathComponent]) {
 		return NO;
 	}
 
 	for (NSString *blacklistedString in _blacklist) {
-		if ([standardizedString containsString:blacklistedString] || [blacklistedString containsString:standardizedString]) {
+		if ([string containsString:blacklistedString]) {
 			return NO;
 		}
 	}
 
 	for (NSString *specialCase in _specialCases) {
-		if ([standardizedString containsString:specialCase]) {
+		if ([string containsString:specialCase]) {
 			return YES;
 		}
 	}
 
-	NSArray *const dirs = [string componentsSeparatedByString:@"/"];
-
-	if ([dirs count] == 2 && ([dirs[0] containsString:@"."] || [dirs[0] containsString:@"'"] || [dirs[0] length] < 3)) {
-		return NO;
-	}
-
 	if ([string hasPrefix:@"file://"]) {
 		return YES;
-	}
-
-	for (NSString *denyString in _denylist) {
-		if ([string containsString:denyString]) {
-			return NO;
-		}
 	}
 
 	return YES;

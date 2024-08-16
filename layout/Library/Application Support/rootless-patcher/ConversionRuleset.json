@@ -27,13 +27,11 @@
 		"/taurine",
 		"/private/etc/apt/undecimus",
 		"/var/Liy/.procursus_strapped",
-		"/Library/Ringtones"
+		"/Library/Ringtones",
+		"://"
 	],
 	"SpecialCases": {
 		"private/var/mobile/Library/Preferences": "var/mobile/Library/Preferences",
 		"~": "~"
-	},
-	"Denylist": [
-		"://"
-	]
+	}
 }

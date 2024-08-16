@@ -62,19 +62,21 @@ find "$TEMPDIR_NEW" -type f | while read -r file; do
     fi
     if otool -L "$file" | grep -q CepheiPrefs.frame; then
         install_name_tool -change /Library/Frameworks/CepheiPrefs.framework/CepheiPrefs @rpath/CepheiPrefs.framework/CepheiPrefs "$file" >/dev/null 2>&1
+        install_name_tool -change /usr/lib/CepheiPrefs.framework/CepheiPrefs @rpath/CepheiPrefs.framework/CepheiPrefs "$file" >/dev/null 2>&1
     fi
     if otool -L "$file" | grep -q Cephei.frame; then
         install_name_tool -change /Library/Frameworks/Cephei.framework/Cephei @rpath/Cephei.framework/Cephei "$file" >/dev/null 2>&1
+        install_name_tool -change /usr/lib/Cephei.framework/Cephei @rpath/Cephei.framework/Cephei "$file" >/dev/null 2>&1
     fi
 
-    otool -L "$file" | grep "/Library/PreferenceBundles" | grep -E '/[^/]*/[^/]*\.bundle' | cut -d' ' -f1  | cut -d':' -f1 | while read -r bundlePath; do
-        bundleName=$(basename "$bundlePath")
-        install_name_tool -change "$bundlePath" "@rpath/$bundleName.bundle/$bundleName" "$file" >/dev/null 2>&1
+    otool -L "$file" | grep "/Library/PreferenceBundles" | grep -E '/[^/]*/[^/]*\.bundle' | cut -d' ' -f1  | cut -d':' -f1 | while read -r BUNDLE_PATH; do
+        BUNDLE_NAME=$(basename "$BUNDLE_PATH")
+        install_name_tool -change "$BUNDLE_PATH" "@rpath/$BUNDLE_NAME.bundle/$BUNDLE_NAME" "$file" >/dev/null 2>&1
     done
 
-    otool -L "$file" | grep "/Library/Frameworks" | grep -E '/[^/]*/[^/]*\.framework' | grep -v "/System/Library/Frameworks" | cut -d' ' -f1  | cut -d':' -f1 | while read -r frameworkPath; do
-        frameworkName=$(basename "$frameworkPath")
-        install_name_tool -change "$frameworkPath" "@rpath/$frameworkName.framework/$frameworkName" "$file" >/dev/null 2>&1
+    otool -L "$file" | grep "/Library/Frameworks" | grep -E '/[^/]*/[^/]*\.framework' | grep -v "/System/Library/Frameworks" | cut -d' ' -f1  | cut -d':' -f1 | while read -r FRAMEWORK_PATH; do
+        FRAMEWORK_NAME=$(basename "$FRAMEWORK_PATH")
+        install_name_tool -change "$FRAMEWORK_PATH" "@rpath/$FRAMEWORK_NAME.framework/$FRAMEWORK_NAME" "$file" >/dev/null 2>&1
     done
 
     if [ -f "$TEMPDIR_OLD"/._lib_cache ]; then
