@@ -4,7 +4,7 @@
 
 @implementation CodesignHandler
 
-+ (BOOL)removeCodesignFromFile:(NSString *)file {
++ (int)removeCodesignFromFile:(NSString *)file {
 	return [SpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-r",
@@ -12,7 +12,7 @@
 	]];
 }
 
-+ (BOOL)addCodesignToFile:(NSString *)file {
++ (int)addCodesignToFile:(NSString *)file {
 	return [SpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-S",

@@ -76,7 +76,7 @@
 	NSError *error;
 	NSArray *const subpaths = [fileManager subpathsOfDirectoryAtPath:directory error:&error];
 	if (error) {
-		printf("Failed to get subpaths of directory.\n");
+		fprintf(stderr, "[-] Failed to get subpaths of directory at path: %s. Error: %s\n", directory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return;
 	}
 

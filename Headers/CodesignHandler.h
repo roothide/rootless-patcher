@@ -2,6 +2,6 @@
 #import <Foundation/NSString.h>
 
 @interface CodesignHandler : NSObject
-+ (BOOL)removeCodesignFromFile:(nonnull NSString *)file;
-+ (BOOL)addCodesignToFile:(nonnull NSString *)file;
++ (int)removeCodesignFromFile:(nonnull NSString *)file;
++ (int)addCodesignToFile:(nonnull NSString *)file;
 @end

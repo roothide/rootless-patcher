@@ -17,7 +17,7 @@
 	if ([fileManager fileExistsAtPath:temporaryDebPath]) {
 		[fileManager removeItemAtPath:temporaryDebPath error:&error];
 		if (error) {
-			printf("Failed to remove already existing .deb file in temporary directory.\n");
+			fprintf(stderr, "[-] Failed to remove already existing .deb file in temporary directory: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return NO;
 		}
 	}
@@ -26,7 +26,7 @@
 	if (![fileManager fileExistsAtPath:temporaryDirectory]) {
 		[fileManager createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:&error];
 		if (error) {
-			printf("Failed to create temporary directory.\n");
+			fprintf(stderr, "[-] Failed to create temporary directory: %s. Error: %s\n", temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return NO;
 		}
 	}
@@ -34,20 +34,20 @@
 	error = nil;
 	[fileManager copyItemAtPath:file toPath:temporaryDebPath error:&error];
 	if (error) {
-		printf("Failed to copy .deb to temporary directory.\n");
+		fprintf(stderr, "[-] Failed to copy .deb %s to temporary directory %s. Error: %s\n", file.fileSystemRepresentation, temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return NO;
 	}
 
 	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
 
-	const BOOL scriptSucceeded = [SpawnHandler spawnWithArguments:@[
+	const int scriptStatus = [SpawnHandler spawnWithArguments:@[
 		@"sh",
 		scriptPath,
 		temporaryDebPath
 	]];
 
-	if (!scriptSucceeded) {
-		printf("Failed to execute script.\n");
+	if (scriptStatus != 0) {
+		fprintf(stderr, "[-] Failed to execute script: %s. Error: %s\n", scriptPath.fileSystemRepresentation, [SpawnHandler errorForCode:scriptStatus].UTF8String);
 		return NO;
 	}
 

@@ -2,5 +2,6 @@
 #import <Foundation/NSString.h>
 
 @interface SpawnHandler : NSObject
-+ (BOOL)spawnWithArguments:(nonnull NSArray<NSString *> *)arguments;
++ (int)spawnWithArguments:(nonnull NSArray<NSString *> *)arguments;
++ (nonnull NSString *)errorForCode:(int)returnCode;
 @end

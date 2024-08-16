@@ -4,7 +4,7 @@
 
 @implementation SpawnHandler
 
-+ (BOOL)spawnWithArguments:(NSArray<NSString *> *)arguments {
++ (int)spawnWithArguments:(NSArray<NSString *> *)arguments {
 	extern char **environ;
 	pid_t pid;
 
@@ -21,7 +21,11 @@
 
 	waitpid(pid, NULL, 0);
 
-	return status == 0;
+	return status;
+}
+
++ (NSString *)errorForCode:(int)returnCode {
+	return [NSString stringWithUTF8String:strerror(returnCode)];
 }
 
 @end

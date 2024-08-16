@@ -16,13 +16,15 @@
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
 		if (argc != 2) {
-			printf("\n");
-			printf("Usage:\n");
-			printf("rootless-patcher <path/to/binary>\n");
-			printf("\n");
+			fprintf(stdout, "\n");
+			fprintf(stdout, "Usage:\n");
+			fprintf(stdout, "rootless-patcher <path/to/binary>\n");
+			fprintf(stdout, "\n");
 
 			return 1;
 		}
+
+		fprintf(stdout, "\n[+] Starting rootless-patcher...\n\n");
 
 		NSString *const temporaryDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"rootless-patcher"];
 		NSFileManager *const fileManager = [NSFileManager defaultManager];
@@ -30,16 +32,20 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const debPath = [NSString stringWithUTF8String:argv[1]];
 		BOOL isDirectory;
 		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) {
+			fprintf(stderr, "[-] Cannot find file at path: %s\n", debPath.fileSystemRepresentation);
 			return 1;
 		}
 
 		const BOOL handleScript = [ScriptHandler handleScriptForFile:debPath];
 		if (!handleScript) {
+			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
 			return 1;
 		}
 
-		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]]];
+		NSString *const patchWorkingDirectoryPath = [NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]];
+		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:patchWorkingDirectoryPath];
 		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) {
+			fprintf(stderr, "[-] Patch working directory does not exist at path: %s\n", patchWorkingDirectoryPath.fileSystemRepresentation);
 			return 1;
 		}
 
@@ -51,14 +57,17 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
 
-		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json")];
+		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
+		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
 
 		NSError *error;
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
 		if (error) {
-			printf("Could not find conversion ruleset.\n");
+			fprintf(stderr, "[-] Could not find ConversionRuleset.json at path: %s. Error: %s\n", conversionRulesetPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
+
+		fprintf(stdout, "[+] Starting string conversion portion...\n");
 
 		BOOL containsOldABI = NO;
 
@@ -82,23 +91,29 @@ int main(int argc, char *argv[], char *envp[]) {
 				}
 			}
 
+			error = nil;
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
+			if (error) {
+				fprintf(stderr, "[-] Failed to get attributes for file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				break;
+			}
 
-			const BOOL successfullyMerged = [MachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
-			if (!successfullyMerged) {
-				printf("Failed to merge Mach-O's!\n");
+			const int machOMergeStatus = [MachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
+			if (machOMergeStatus != 0) {
+				fprintf(stderr, "[-] Failed to merge Mach-O's: %s. Error: %s\n", thinnedMachOs.description.UTF8String, [SpawnHandler errorForCode:machOMergeStatus].UTF8String);
 				break;
 			}
 
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:fatMachO error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to set attributes for file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
-			const BOOL addedCodesign = [CodesignHandler addCodesignToFile:fatMachO];
-			if (!addedCodesign) {
-				printf("Failed to add code signature to file: %s\n", fatMachO.fileSystemRepresentation);
+			const int addCodesignStatus = [CodesignHandler addCodesignToFile:fatMachO];
+			if (addCodesignStatus != 0) {
+				fprintf(stderr, "[-] Failed to add code signature to file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, [SpawnHandler errorForCode:addCodesignStatus].UTF8String);
 				break;
 			}
 
@@ -106,16 +121,22 @@ int main(int argc, char *argv[], char *envp[]) {
 				error = nil;
 				[fileManager removeItemAtPath:file error:&error];
 				if (error) {
+					fprintf(stderr, "[-] Failed to remove file at path: %s\n", file.fileSystemRepresentation);
 					break;
 				}
 			}
 		}
 
-		printf("Contains old abi? %d\n", containsOldABI);
+		fprintf(stdout, "[+] Finishing string conversion portion...\n");
+
+		fprintf(stdout, "[+] Contains Old ABI - %s\n", containsOldABI ? "YES" : "NO");
 		error = nil;
+
+		fprintf(stdout, "[+] Starting control file portion...\n");
 
 		NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlFile error:&error];
 		if (error) {
+			fprintf(stderr, "[-] Failed to get file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
 
@@ -131,19 +152,26 @@ int main(int argc, char *argv[], char *envp[]) {
 		error = nil;
 		[[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 		if (error) {
+			fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
 
 		error = nil;
 		[fileManager setAttributes:fileAttributes ofItemAtPath:controlFile error:&error];
 		if (error) {
+			fprintf(stderr, "[-] Failed to set file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
+
+		fprintf(stdout, "[+] Finishing control file portion...\n");
+
+		fprintf(stdout, "[+] Starting plist file portion...\n");
 
 		error = nil;
 		for (NSString *plist in plistFiles) {
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:plist error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to get file attributes for plist file: %s. Error: %s\n", plist.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
@@ -155,14 +183,20 @@ int main(int argc, char *argv[], char *envp[]) {
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to set file attributes for plist file: %s. Error: %s\n", plist.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 		}
+
+		fprintf(stdout, "[+] Finishing plist file portion...\n");
+
+		fprintf(stdout, "[+] Starting control script file portion...\n");
 
 		error = nil;
 		for (NSString *controlScriptFile in controlScriptFiles) {
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlScriptFile error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to get file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
@@ -173,29 +207,37 @@ int main(int argc, char *argv[], char *envp[]) {
 			NSString *const convertedFileContents = [handler fileContents];
 			[convertedFileContents writeToFile:controlScriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to write to file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
 			error = nil;
 			[fileManager setAttributes:fileAttributes ofItemAtPath:controlScriptFile error:&error];
 			if (error) {
+				fprintf(stderr, "[-] Failed to set file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 		}
 
+		fprintf(stdout, "[+] Finishing control script file portion...\n");
+
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
-		[SpawnHandler spawnWithArguments:@[
+		const int dpkgDebStatus = [SpawnHandler spawnWithArguments:@[
 			@"dpkg-deb",
 			@"-b",
 			patchWorkingDirectory,
 			newPath
 		]];
 
+		if (dpkgDebStatus != 0) {
+			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb. Error: %s", [SpawnHandler errorForCode:dpkgDebStatus].UTF8String);
+		}
+
 		error = nil;
 		[fileManager removeItemAtPath:patchWorkingDirectory error:&error];
 		if (error) {
-			printf("Error removing patch directory.\n");
+			fprintf(stderr, "[-] Error removing patch working directory: %s. Error: %s\n", patchWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
 
@@ -203,9 +245,11 @@ int main(int argc, char *argv[], char *envp[]) {
 		error = nil;
 		[fileManager removeItemAtPath:temporaryDebPath error:&error];
 		if (error) {
-			printf("Error removing temporary .deb path.\n");
+			fprintf(stderr, "[-] Error removing temporary .deb path: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return 1;
 		}
+
+		fprintf(stdout, "\n[+] Done! New .deb path: %s\n\n", newPath.fileSystemRepresentation);
 
 		return 0;
 	}

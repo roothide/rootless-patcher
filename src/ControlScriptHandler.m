@@ -13,7 +13,8 @@
 		NSError *error;
 		handler->_fileContents = [NSString stringWithContentsOfFile:controlScriptFile encoding:NSUTF8StringEncoding error:&error];
 		if (error) {
-			printf("Failed to get file contents.\n");
+			fprintf(stderr, "[-] Failed to get control script file contents at path: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			return nil;
 		}
 	}
 

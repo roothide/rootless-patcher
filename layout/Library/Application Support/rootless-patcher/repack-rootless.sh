@@ -5,11 +5,11 @@ set -e
 LDID="ldid -Hsha256"
 
 if [ -z "$1" ] || ! file "$1" | grep -q "Debian binary package" ; then
-    echo "[SCRIPT] Usage: $0 [/path/to/deb]"
+    echo "[+] Usage: $0 [/path/to/deb]"
     exit 1;
 fi
 
-echo "[SCRIPT] Creating workspace!"
+echo "[+] Creating temporary workspace!"
 
 DEB_NAME=$(basename "$1" .deb)
 
@@ -23,7 +23,7 @@ TEMPDIR_OLD="$(dirname "$1")/old_$DEB_NAME"
 TEMPDIR_NEW="$(dirname "$1")/patch_$DEB_NAME"
 
 if [ ! -d "$TEMPDIR_OLD" ] || [ ! -d "$TEMPDIR_NEW" ]; then
-    echo "[SCRIPT] Creating temporary directories failed."
+    echo "[+] Creating temporary directories failed."
     rm -rf "$TEMPDIR_OLD" "$TEMPDIR_NEW"
     exit 1;
 fi
@@ -33,7 +33,7 @@ fi
 dpkg-deb -R "$1" "$TEMPDIR_OLD"
 
 if [ -d "$TEMPDIR_OLD/var/jb" ]; then
-    echo "[SCRIPT] Deb already rootless. Skipping and exiting cleanly."
+    echo "[+] Deb already rootless. Skipping and exiting cleanly."
     rm -rf "$TEMPDIR_OLD" "$TEMPDIR_NEW"
     exit 0;
 fi
@@ -48,7 +48,7 @@ mv -f "$TEMPDIR_OLD"/* "$TEMPDIR_OLD"/* "$TEMPDIR_NEW"/var/jb >/dev/null 2>&1 ||
 
 find "$TEMPDIR_NEW" -type f | while read -r file; do
   if file -b "$file" | grep -q "Mach-O"; then
-    echo "[SCRIPT] $file"
+    echo "[+] Script handling file: $file"
 
     INSTALL_NAME=$(otool -D "$file" | grep -v -e ":$" -e "^Archive :" | head -n1)
     otool -L "$file" | tail -n +2 | grep /usr/lib/'[^/]'\*.dylib | cut -d' ' -f1 | tr -d "[:blank:]" > "$TEMPDIR_OLD"/._lib_cache
@@ -93,10 +93,12 @@ find "$TEMPDIR_NEW" -type f | while read -r file; do
     install_name_tool -add_rpath "/var/jb/Library/PreferenceBundles" "$file" >/dev/null 2>&1
 
     $LDID -S "$file"
+
+    echo "[+] Success!"
   fi
 done
 
-echo "[SCRIPT] Cleaning up"
+echo "[+] Cleaning up script portion"
 rm -rf "$TEMPDIR_OLD"
 
 ### Real script end

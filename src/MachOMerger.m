@@ -4,7 +4,7 @@
 
 @implementation MachOMerger
 
-+ (BOOL)mergeMachOsAtPaths:(NSArray<NSString *> *)paths outputPath:(NSString *)outputPath {
++ (int)mergeMachOsAtPaths:(NSArray<NSString *> *)paths outputPath:(NSString *)outputPath {
 	NSMutableArray *const args = [NSMutableArray array];
 	[args addObject:@"lipo"];
 	[args addObjectsFromArray:paths];

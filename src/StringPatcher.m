@@ -50,7 +50,7 @@ struct __CFString {
 }
 
 - (void)patchString:(NSString *)originalString toString:(NSString *)patchedString {
-	printf("\"%s\" -> \"%s\"", originalString.UTF8String, patchedString.UTF8String);
+	fprintf(stdout, "\t\"%s\" -> \"%s\"", originalString.UTF8String, patchedString.UTF8String);
 
 	uint64_t originalAddress = [self _getCStringAddress:originalString inNewSection:NO];
 	uint64_t replacementAddress = [self _getCStringAddress:patchedString inNewSection:YES];
@@ -90,7 +90,7 @@ struct __CFString {
         struct __CFString *cfString = (struct __CFString *)(buffer + tableAddress + i);
 
 		if (OSSwapLittleToHostInt32((uint32_t)cfString->data) == originalAddress) {
-			printf(" | cfstring\n");
+			fprintf(stdout, " | cfstring\n");
 			*(uint32_t *)(&cfString->data) = OSSwapHostToLittleInt32(replacementAddress);
 			*(uint32_t *)(&cfString->length) = OSSwapHostToLittleInt32(newLength);
 		}
@@ -104,7 +104,7 @@ struct __CFString {
 	for (uint32_t i = 0; i < _globalTableSection->size; i += sizeof(char *)) {
 		uint64_t reference = OSSwapLittleToHostInt64(*(uint64_t *)(buffer + tableAddress + i));
 		if ((uint32_t)reference == (uint32_t)originalAddress) {
-			printf(" | global cstring\n");
+			fprintf(stdout, " | global cstring\n");
             *(uint64_t *)(buffer + tableAddress + i) = OSSwapHostToLittleInt64(replacementAddress);
 		}
 	}
@@ -137,7 +137,7 @@ struct __CFString {
 			registers[currentRegister] = registers[addRegister] + addImmediate;
 
             if (registers[currentRegister] == originalAddress) {
-				printf(" | cstring\n");
+				fprintf(stdout, " | cstring\n");
 				const uint32_t adrpImmediateNew = (uint32_t)(((replacementAddress & ~PAGE_OFFSET_MASK) / ARM_PAGE_SIZE) - ((i & ~PAGE_OFFSET_MASK) / ARM_PAGE_SIZE));
 				const uint32_t addImmediateNew = (uint32_t)(replacementAddress & PAGE_OFFSET_MASK);
 				const uint32_t adrpInstructionNew = generate_adrp(currentRegister, adrpImmediateNew);
@@ -150,7 +150,7 @@ struct __CFString {
 			registers[currentRegister] = get_adr_value(currentInstruction, i);
 
 			if (registers[currentRegister] == originalAddress) {
-				printf(" | cstring\n");
+				fprintf(stdout, " | cstring\n");
 				const uint32_t adrImmediateNew = (uint32_t)(replacementAddress - i);
 				const uint32_t adrInstructionNew = generate_adr(currentRegister, adrImmediateNew);
 

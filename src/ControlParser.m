@@ -14,7 +14,8 @@
 		NSError *error;
 		parser->_controlFileContents = [NSString stringWithContentsOfFile:controlFile encoding:NSUTF8StringEncoding error:&error];
 		if (error) {
-			printf("Failed to get file contents.\n");
+			fprintf(stderr, "[-] Failed to get control file contents at path: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			return nil;
 		}
 		[parser _parseControlFile];
 	}
