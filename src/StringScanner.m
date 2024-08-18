@@ -40,7 +40,7 @@
 			[stringMap setObject:convertedString forKey:origString];
 		}
 	}
-	
+
 	return [stringMap copy];
 }
 
@@ -60,7 +60,7 @@
 		return nil;
 	}
 
-	uintptr_t start = (uintptr_t)header + cStringSection->offset;
+	const uintptr_t start = (uintptr_t)header + cStringSection->offset;
 	const char *string = NULL;
 
 	for (uint32_t offset = 0; offset < cStringSection->size; offset++) {
@@ -100,7 +100,7 @@
 		return nil;
 	}
 
-	uintptr_t start = (uintptr_t)header + dataSection->offset;
+	const uintptr_t start = (uintptr_t)header + dataSection->offset;
 	const char *string = NULL;
 
 	for (uint32_t offset = 0; offset < dataSection->size; offset++) {

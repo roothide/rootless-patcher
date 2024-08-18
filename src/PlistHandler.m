@@ -3,30 +3,31 @@
 #import "Headers/ConversionHandler.h"
 
 @implementation PlistHandler {
-	NSMutableDictionary *_plistDictionary;
+	id _plistContainer;
 	ConversionHandler *_conversionHandler;
 }
 
-+ (instancetype)handlerWithPlistFile:(nonnull NSString *)file {
++ (instancetype)handlerWithPlistFile:(NSString *)file {
 	PlistHandler *const handler = [PlistHandler new];
 
 	if (handler) {
-		handler->_plistDictionary = [NSMutableDictionary dictionaryWithContentsOfFile:file];
+		NSData *const data = [NSData dataWithContentsOfFile:file];
+		handler->_plistContainer = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListMutableContainersAndLeaves format:nil error:nil];
 	}
 
 	return handler;
 }
 
-- (void)convertStringsUsingStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	_conversionHandler = [ConversionHandler handlerWithConversionRuleset:stringMap];
-	[self _patchStringValues:_plistDictionary];
+- (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, id> *)conversionRuleset {
+	_conversionHandler = [ConversionHandler handlerWithConversionRuleset:conversionRuleset];
+	[self _patchStringValues:_plistContainer];
 }
 
 - (void)_patchStringValues:(id)container {
-	if ([container isKindOfClass:[NSDictionary class]]) {
+	if ([container isKindOfClass:[NSMutableDictionary class]]) {
 		NSMutableDictionary *const dictionary = container;
 
-		for (int i = dictionary.count - 1; i >= 0; i--) {
+		for (NSUInteger i = 0; i < dictionary.count; i++) {
 			id key = [dictionary allKeys][i];
 			id value = [dictionary objectForKey:key];
 
@@ -35,14 +36,14 @@
 					NSString *const convertedString = [_conversionHandler convertedStringForString:value];
 					[dictionary setObject:convertedString forKey:key];
 				}
-			} else if ([value isKindOfClass:[NSDictionary class]] || [value isKindOfClass:[NSArray class]]) {
+			} else if ([value isKindOfClass:[NSMutableDictionary class]] || [value isKindOfClass:[NSMutableArray class]]) {
 				[self _patchStringValues:value];
 			}
 		}
-	} else if ([container isKindOfClass:[NSArray class]]) {
+	} else if ([container isKindOfClass:[NSMutableArray class]]) {
 		NSMutableArray *const array = container;
 
-		for (int i = array.count - 1; i >= 0; i--) {
+		for (NSUInteger i = 0; i < array.count; i++) {
 			id value = [array objectAtIndex:i];
 
 			if ([value isKindOfClass:[NSString class]]) {
@@ -50,15 +51,15 @@
 					NSString *const convertedString = [_conversionHandler convertedStringForString:value];
 					array[i] = convertedString;
 				}
-			} else if ([value isKindOfClass:[NSDictionary class]] || [value isKindOfClass:[NSArray class]]) {
+			} else if ([value isKindOfClass:[NSMutableDictionary class]] || [value isKindOfClass:[NSMutableArray class]]) {
 				[self _patchStringValues:value];
 			}
 		}
 	}
 }
 
-- (NSDictionary *)plistDictionary {
-	return [_plistDictionary copy];
+- (id)plistContainer {
+	return [_plistContainer copy];
 }
 
 @end

@@ -10,9 +10,9 @@
 	ControlScriptHandler *const handler = [ControlScriptHandler new];
 
 	if (handler) {
-		NSError *error;
+		NSError *error = nil;
 		handler->_fileContents = [NSString stringWithContentsOfFile:controlScriptFile encoding:NSUTF8StringEncoding error:&error];
-		if (error) {
+		if (!handler->_fileContents) {
 			fprintf(stderr, "[-] Failed to get control script file contents at path: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return nil;
 		}
@@ -21,13 +21,15 @@
 	return handler;
 }
 
-- (void)convertStringsUsingStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	ConversionHandler *const handler = [ConversionHandler handlerWithConversionRuleset:stringMap];
+- (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, NSString *> *)conversionRuleset {
+	ConversionHandler *const handler = [ConversionHandler handlerWithConversionRuleset:conversionRuleset];
 
 	NSArray *const separatedComponents = [_fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \n\""]];
 	NSMutableDictionary *const convertedStrings = [NSMutableDictionary dictionary];
 
-	for (size_t i = 0; i < separatedComponents.count; i++) {
+	const NSUInteger separatedComponentsCount = [separatedComponents count];
+
+	for (NSUInteger i = 0; i < separatedComponentsCount; i++) {
 		NSString *const string = [separatedComponents objectAtIndex:i];
 
 		if (![string length]) {

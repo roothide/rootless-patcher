@@ -8,10 +8,10 @@
 	extern char **environ;
 	pid_t pid;
 
-	const size_t arraySize = [arguments count];
+	const NSUInteger arraySize = [arguments count];
 
 	char **argumentsC = (char **)malloc(arraySize * sizeof(char *) + 1);
-	for (size_t i = 0; i < arraySize; i++) {
+	for (NSUInteger i = 0; i < arraySize; i++) {
 		argumentsC[i] = (char *)[arguments[i] UTF8String];
 	}
 	argumentsC[arraySize] = NULL;

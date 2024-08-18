@@ -1,7 +1,7 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
-#import <stdio.h>
+#import <stdint.h>
 
 #define PAGE_OFFSET_MASK	0xFFF
 #define ARM_PAGE_SIZE		0x1000

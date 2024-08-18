@@ -9,6 +9,7 @@
 	NSMutableData *_fileData;
 	MachOParser *_parser;
 	NSString *_filePath;
+	NSMutableDictionary *_replacementOffsetMap;
 }
 
 + (instancetype)modifierWithFile:(NSString *)file {
@@ -20,6 +21,8 @@
 		modifier->_fileData = data;
 		modifier->_parser = [MachOParser parserWithHeader:(struct mach_header_64 *)[data bytes]];
 		modifier->_filePath = file;
+
+		modifier->_replacementOffsetMap = [NSMutableDictionary dictionary];
 	}
 
 	return modifier;
@@ -69,7 +72,7 @@
 	strncpy((char *)newSection.segname, segname.UTF8String, sizeof(newSection.segname));
 	strncpy((char *)newSection.sectname, sectname.UTF8String, sizeof(newSection.sectname));
 
-	uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
+	const uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
 
 	unsigned char *cmds = (unsigned char *)malloc(header->sizeofcmds);
 	memcpy(cmds, (unsigned char *)header + sizeof(struct mach_header_64), header->sizeofcmds);
@@ -98,7 +101,7 @@
 	[self _shiftCommandsWithNewSegment:newSegment chainedFixups:&chainedFixups];
 
 	unsigned char *codepage = (unsigned char *)malloc(newSegment.vmsize);
-	[self _addPatchedStringsFromStringMap:stringMap toCodepage:codepage];
+	[self _addPatchedStringsFromStringMap:stringMap toCodepage:codepage mappedOffset:newSegment.vmaddr - newSegment.fileoff sectionOffset:newSection.offset];
 	[_fileData appendBytes:codepage length:newSegment.vmsize];
 	free((void *)codepage);
 
@@ -110,24 +113,25 @@
 }
 
 - (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	StringPatcher *const patcher = [StringPatcher patcherWithData:_fileData];
+	StringPatcher *const patcher = [StringPatcher patcherWithData:_fileData replacementOffsetMap:_replacementOffsetMap];
 
 	for (NSString *originalString in stringMap) {
-		NSString *patchedString = [stringMap objectForKey:originalString];
+		NSString *const patchedString = [stringMap objectForKey:originalString];
 		[patcher patchString:originalString toString:patchedString];
 	}
 
 	_fileData = [[patcher data] mutableCopy];
 }
 
-- (void)_addPatchedStringsFromStringMap:(NSDictionary<NSString *, NSString *> *)stringMap toCodepage:(unsigned char *)codepage {
+- (void)_addPatchedStringsFromStringMap:(NSDictionary<NSString *, NSString *> *)stringMap toCodepage:(unsigned char *)codepage mappedOffset:(uint64_t)mappedOffset sectionOffset:(uint64_t)sectionOffset {
 	NSArray<NSString *> *const patchedStrings = [stringMap allValues];
 	uint32_t offset = 0;
 
-	const size_t stringCount = [stringMap count];
-	for (int i = 0; i < stringCount; i++) {
+	const NSUInteger stringCount = [stringMap count];
+	for (NSUInteger i = 0; i < stringCount; i++) {
 		const char *string = [patchedStrings[i] UTF8String];
 		strcpy((char *)codepage + offset, string);
+		[_replacementOffsetMap setObject:@(sectionOffset + offset + mappedOffset) forKey:patchedStrings[i]];
 		offset += strlen(string) + 1;
 	}
 }
@@ -136,7 +140,7 @@
 	const struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
 	const uint64_t fixOffset = segment.filesize;
 
-	struct load_command *lc = (struct load_command *)((uint64_t)header + sizeof(struct mach_header_64));
+	struct load_command *lc = (struct load_command *)(header + 1);
 
 	for (uint32_t i = 0; i < header->ncmds; i++) {
 		const uint32_t cmd = lc->cmd;

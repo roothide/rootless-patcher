@@ -7,8 +7,6 @@ else ifeq ($(TARGET_OS), ios)
 TARGET := iphone:clang:latest:15.0
 ARCHS = arm64
 
-THEOS_PACKAGE_SCHEME=rootless
-
 endif
 
 include $(THEOS)/makefiles/common.mk

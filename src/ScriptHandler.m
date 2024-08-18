@@ -6,7 +6,7 @@
 @implementation ScriptHandler
 
 + (BOOL)handleScriptForFile:(NSString *)file {
-	NSError *error;
+	NSError *error = nil;
 
 	NSFileManager *const fileManager = [NSFileManager defaultManager];
 	NSString *const temporaryDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"rootless-patcher"];
@@ -15,8 +15,8 @@
 	NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:deb];
 
 	if ([fileManager fileExistsAtPath:temporaryDebPath]) {
-		[fileManager removeItemAtPath:temporaryDebPath error:&error];
-		if (error) {
+		const BOOL success = [fileManager removeItemAtPath:temporaryDebPath error:&error];
+		if (!success) {
 			fprintf(stderr, "[-] Failed to remove already existing .deb file in temporary directory: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return NO;
 		}
@@ -24,16 +24,16 @@
 
 	error = nil;
 	if (![fileManager fileExistsAtPath:temporaryDirectory]) {
-		[fileManager createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:&error];
-		if (error) {
+		const BOOL success = [fileManager createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:&error];
+		if (!success) {
 			fprintf(stderr, "[-] Failed to create temporary directory: %s. Error: %s\n", temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return NO;
 		}
 	}
 
 	error = nil;
-	[fileManager copyItemAtPath:file toPath:temporaryDebPath error:&error];
-	if (error) {
+	const BOOL success = [fileManager copyItemAtPath:file toPath:temporaryDebPath error:&error];
+	if (!success) {
 		fprintf(stderr, "[-] Failed to copy .deb %s to temporary directory %s. Error: %s\n", file.fileSystemRepresentation, temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return NO;
 	}

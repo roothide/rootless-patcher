@@ -4,8 +4,8 @@
 
 @interface PlistHandler : NSObject
 + (nullable instancetype)handlerWithPlistFile:(nonnull NSString *)file;
-- (void)convertStringsUsingStringMap:(nonnull NSDictionary<NSString *, NSString *> *)stringMap;
-- (nonnull NSDictionary *)plistDictionary;
+- (void)convertStringsUsingConversionRuleset:(nonnull NSDictionary<NSString *, id> *)conversionRuleset;
+- (nonnull NSDictionary *)plistContainer;
 
 + (nullable instancetype)new __attribute__((unavailable("Use +handlerWithPlistFile: instead")));
 - (nullable instancetype)init __attribute__((unavailable("Use +handlerWithPlistFile: instead")));

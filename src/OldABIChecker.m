@@ -8,7 +8,7 @@
 + (BOOL)containsOldABI:(NSData *)machO {
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[machO bytes];
 
-	if (header->magic == FAT_MAGIC || header->magic == FAT_CIGAM) {
+	if (OSSwapBigToHostInt32(header->magic) == FAT_MAGIC) {
 		const struct fat_header *fatHeader = (const struct fat_header *)header;
 		struct fat_arch *arch = (struct fat_arch *)(fatHeader + sizeof(struct fat_header));
 
@@ -16,26 +16,16 @@
 			const struct mach_header_64 *thinHeader = (const struct mach_header_64 *)(fatHeader + OSSwapBigToHostInt32(arch->offset));
 
 			if ((thinHeader->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
-				if (!(thinHeader->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI)) {
-					return YES;
-				} else {
-					return NO;
-				}
+				return !(thinHeader->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI);
 			} else {
 				return NO;
 			}
 
 			arch += 1;
 		}
-	} else if (header->magic == MH_MAGIC_64 || header->magic == MH_CIGAM_64) {
+	} else if (OSSwapBigToHostInt32(header->magic) == MH_MAGIC_64) {
 		if ((header->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
-			if (!(header->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI)) {
-				return YES;
-			} else {
-				return NO;
-			}
-		} else {
-			return NO;
+			return !(header->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI);
 		}
 	}
 

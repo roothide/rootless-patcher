@@ -3,7 +3,7 @@
 
 @interface ControlScriptHandler : NSObject
 + (nullable instancetype)handlerWithControlScriptFile:(nonnull NSString *)controlScriptFile;
-- (void)convertStringsUsingStringMap:(nonnull NSDictionary<NSString *, NSString *> *)stringMap;
+- (void)convertStringsUsingConversionRuleset:(nonnull NSDictionary<NSString *, id> *)conversionRuleset;
 - (nonnull NSString *)fileContents;
 
 + (nullable instancetype)new __attribute__((unavailable("Use +handlerWithControlScriptFile: instead")));

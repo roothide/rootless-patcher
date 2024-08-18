@@ -70,6 +70,12 @@
 		}
 	}
 
+	/**
+	 * Specifically using stringByAppendingString: instead of stringByAppendingPathComponent: to handle cases with a trailing /.
+	 * Example:
+	 * /Applications/ -> /var/jb/Applications | stringByAppendingPathComponent:
+	 * /Applications/ -> /var/jb/Applications/ | stringByAppendingString:
+	 */
 	if ([string hasPrefix:@"file://"]) {
 		return [@"file:///var/jb" stringByAppendingString:[self _string:string byStrippingPrefix:@"file://"]];
 	} else if ([string hasPrefix:@"/"]) {

@@ -60,9 +60,9 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
 		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
 
-		NSError *error;
+		NSError *error = nil;
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
-		if (error) {
+		if (!conversionRuleset) {
 			fprintf(stderr, "[-] Could not find ConversionRuleset.json at path: %s. Error: %s\n", conversionRulesetPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
@@ -93,7 +93,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 			error = nil;
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:fatMachO error:&error];
-			if (error) {
+			if (!fileAttributes) {
 				fprintf(stderr, "[-] Failed to get attributes for file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
@@ -105,8 +105,8 @@ int main(int argc, char *argv[], char *envp[]) {
 			}
 
 			error = nil;
-			[fileManager setAttributes:fileAttributes ofItemAtPath:fatMachO error:&error];
-			if (error) {
+			const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:fatMachO error:&error];
+			if (!attributeSetSuccess) {
 				fprintf(stderr, "[-] Failed to set attributes for file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
@@ -119,8 +119,8 @@ int main(int argc, char *argv[], char *envp[]) {
 
 			for (NSString *file in thinnedMachOs) {
 				error = nil;
-				[fileManager removeItemAtPath:file error:&error];
-				if (error) {
+				const BOOL removeFileSuccess = [fileManager removeItemAtPath:file error:&error];
+				if (!removeFileSuccess) {
 					fprintf(stderr, "[-] Failed to remove file at path: %s\n", file.fileSystemRepresentation);
 					break;
 				}
@@ -130,12 +130,12 @@ int main(int argc, char *argv[], char *envp[]) {
 		fprintf(stdout, "[+] Finishing string conversion portion...\n");
 
 		fprintf(stdout, "[+] Contains Old ABI - %s\n", containsOldABI ? "YES" : "NO");
-		error = nil;
 
 		fprintf(stdout, "[+] Starting control file portion...\n");
 
+		error = nil;
 		NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlFile error:&error];
-		if (error) {
+		if (!fileAttributes) {
 			fprintf(stderr, "[-] Failed to get file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
@@ -146,19 +146,21 @@ int main(int argc, char *argv[], char *envp[]) {
 			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
 		}
 
+		[controlParser setControlValue:@"iphoneos-arm64" forKey:@"Architecture"];
+
 		NSString *const packageID = [controlParser controlValueForKey:@"Package"];
 		NSString *const packageVersion = [controlParser controlValueForKey:@"Version"];
 
 		error = nil;
-		[[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
-		if (error) {
+		const BOOL writeSuccess = [[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+		if (!writeSuccess) {
 			fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
 
 		error = nil;
-		[fileManager setAttributes:fileAttributes ofItemAtPath:controlFile error:&error];
-		if (error) {
+		const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:controlFile error:&error];
+		if (!attributeSetSuccess) {
 			fprintf(stderr, "[-] Failed to set file attributes for control file: %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
@@ -170,19 +172,19 @@ int main(int argc, char *argv[], char *envp[]) {
 		error = nil;
 		for (NSString *plist in plistFiles) {
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:plist error:&error];
-			if (error) {
+			if (!fileAttributes) {
 				fprintf(stderr, "[-] Failed to get file attributes for plist file: %s. Error: %s\n", plist.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
 			PlistHandler *const handler = [PlistHandler handlerWithPlistFile:plist];
-			[handler convertStringsUsingStringMap:conversionRuleset];
+			[handler convertStringsUsingConversionRuleset:conversionRuleset];
 
-			[[handler plistDictionary] writeToFile:plist atomically:YES];
+			[[handler plistContainer] writeToFile:plist atomically:YES];
 
 			error = nil;
-			[fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];
-			if (error) {
+			const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:plist error:&error];
+			if (!attributeSetSuccess) {
 				fprintf(stderr, "[-] Failed to set file attributes for plist file: %s. Error: %s\n", plist.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
@@ -195,25 +197,25 @@ int main(int argc, char *argv[], char *envp[]) {
 		error = nil;
 		for (NSString *controlScriptFile in controlScriptFiles) {
 			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlScriptFile error:&error];
-			if (error) {
+			if (!fileAttributes) {
 				fprintf(stderr, "[-] Failed to get file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
 			ControlScriptHandler *const handler = [ControlScriptHandler handlerWithControlScriptFile:controlScriptFile];
-			[handler convertStringsUsingStringMap:conversionRuleset];
+			[handler convertStringsUsingConversionRuleset:conversionRuleset];
 
 			error = nil;
 			NSString *const convertedFileContents = [handler fileContents];
-			[convertedFileContents writeToFile:controlScriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
-			if (error) {
+			const BOOL writeSuccess = [convertedFileContents writeToFile:controlScriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+			if (!writeSuccess) {
 				fprintf(stderr, "[-] Failed to write to file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
 			error = nil;
-			[fileManager setAttributes:fileAttributes ofItemAtPath:controlScriptFile error:&error];
-			if (error) {
+			const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:controlScriptFile error:&error];
+			if (!attributeSetSuccess) {
 				fprintf(stderr, "[-] Failed to set file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
@@ -235,16 +237,16 @@ int main(int argc, char *argv[], char *envp[]) {
 		}
 
 		error = nil;
-		[fileManager removeItemAtPath:patchWorkingDirectory error:&error];
-		if (error) {
+		const BOOL patchWorkingDirectoryRemoveSuccess = [fileManager removeItemAtPath:patchWorkingDirectory error:&error];
+		if (!patchWorkingDirectoryRemoveSuccess) {
 			fprintf(stderr, "[-] Error removing patch working directory: %s. Error: %s\n", patchWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
 
 		NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:[debPath lastPathComponent]];
 		error = nil;
-		[fileManager removeItemAtPath:temporaryDebPath error:&error];
-		if (error) {
+		const BOOL temporaryDirectoryRemoveSuccess = [fileManager removeItemAtPath:temporaryDebPath error:&error];
+		if (!temporaryDirectoryRemoveSuccess) {
 			fprintf(stderr, "[-] Error removing temporary .deb path: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}

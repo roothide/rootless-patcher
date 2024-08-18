@@ -49,13 +49,13 @@
 	__weak typeof(self) weakSelf = self;
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
-	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv"];
+	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv", @"extrainst"];
 
 	[self _recursivelyScanDirectory:[_directory stringByAppendingPathComponent:@"DEBIAN"] withBlock:^(NSString *filePath) {
 		if ([controlScriptNames containsObject:[filePath lastPathComponent]]) {
 			NSData *const data = [NSData dataWithContentsOfFile:filePath];
 
-			const struct mach_header_64 *header = (const struct mach_header_64 *)[data bytes];
+			const struct mach_header_64 *const header = (const struct mach_header_64 *)[data bytes];
 
 			if (header && ![weakSelf _magicMatchesMachO:header->magic]) {
 				[files addObject:filePath];
@@ -66,14 +66,14 @@
 	return [files count] ? files : nil;
 }
 
-- (nullable NSString *)controlFile {
+- (NSString *)controlFile {
 	return [[_directory stringByAppendingPathComponent:@"DEBIAN"] stringByAppendingPathComponent:@"control"];
 }
 
 - (void)_recursivelyScanDirectory:(NSString *)directory withBlock:(void (^)(NSString *))block {
 	NSFileManager *const fileManager = [NSFileManager defaultManager];
 
-	NSError *error;
+	NSError *error = nil;
 	NSArray *const subpaths = [fileManager subpathsOfDirectoryAtPath:directory error:&error];
 	if (error) {
 		fprintf(stderr, "[-] Failed to get subpaths of directory at path: %s. Error: %s\n", directory.fileSystemRepresentation, error.localizedDescription.UTF8String);
@@ -84,16 +84,16 @@
 		NSString *const fullPath = [directory stringByAppendingPathComponent:subpath];
 
 		BOOL isDirectory;
-		[fileManager fileExistsAtPath:fullPath isDirectory:&isDirectory];
+		const BOOL fileExists = [fileManager fileExistsAtPath:fullPath isDirectory:&isDirectory];
 
-		if (!isDirectory) {
+		if (fileExists && !isDirectory) {
 			block(fullPath);
 		}
 	}
 }
 
 - (BOOL)_magicMatchesMachO:(uint32_t)magic {
-	return magic == MH_MAGIC_64 || magic == MH_CIGAM_64 || magic == FAT_MAGIC || magic == FAT_CIGAM;
+	return OSSwapBigToHostInt32(magic) == MH_MAGIC_64 || OSSwapBigToHostInt32(magic) == FAT_MAGIC;
 }
 
 @end

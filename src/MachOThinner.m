@@ -22,21 +22,22 @@
 	NSData *const data = [NSData dataWithContentsOfFile:path];
 
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[data bytes];
-	const uint32_t magic = header->magic;
 
-	if (magic == FAT_MAGIC || magic == FAT_CIGAM) {
+	if (OSSwapBigToHostInt32(header->magic) == FAT_MAGIC) {
 		NSArray<NSString *> *const thinnedMachOsFromFAT = [MachOThinner _thinnedMachOsFromFAT:path];
 		for (NSString *thinnedMachO in thinnedMachOsFromFAT) {
 			[thinnedMachOs addObject:thinnedMachO];
 		}
-	} else {
+	} else if (OSSwapBigToHostInt32(header->magic) == MH_MAGIC_64) {
 		NSString *const thinnedPath = [MachOThinner _thinnedPathForPath:path cpusubtype:header->cpusubtype];
 
-		NSError *error;
-		[data writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
+		NSError *error = nil;
+		const BOOL success = [data writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
 
-		if (!error) {
+		if (success) {
 			[thinnedMachOs addObject:thinnedPath];
+		} else {
+			fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", thinnedPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		}
 	}
 
@@ -60,11 +61,13 @@
 
 			NSString *const thinnedPath = [MachOThinner _thinnedPathForPath:path cpusubtype:mh->cpusubtype];
 
-			NSError *error;
-			[subdata writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
+			NSError *error = nil;
+			const BOOL success = [subdata writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
 
-			if (!error) {
+			if (success) {
 				[thinnedMachOs addObject:thinnedPath];
+			} else {
+				fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", thinnedPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			}
 		}
 

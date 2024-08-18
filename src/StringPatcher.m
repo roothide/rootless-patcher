@@ -12,36 +12,34 @@ struct __CFString {
 
 @implementation StringPatcher {
 	NSMutableData *_data;
+	NSDictionary<NSString *, NSNumber *> *_replacementOffsetMap;
 	MachOParser *_parser;
+	struct segment_command_64 *_textSegment;
 	struct section_64 *_cfstringTableSection;
-	size_t _cfstringTableSectionSize;
 	struct section_64 *_globalTableSection;
-	size_t _globalTableSectionSize;
+	struct section_64 *_cStringTableSection;
 	BOOL _isDylib;
 }
 
-+ (instancetype)patcherWithData:(NSData *)data {
++ (instancetype)patcherWithData:(NSData *)data replacementOffsetMap:(NSDictionary<NSString *, NSNumber *> *)offsetMap {
 	StringPatcher *const patcher = [StringPatcher new];
 
 	if (patcher) {
 		patcher->_data = [data mutableCopy];
+		patcher->_replacementOffsetMap = offsetMap;
 
 		struct mach_header_64 *header = (struct mach_header_64 *)[patcher->_data bytes];
 		patcher->_parser = [MachOParser parserWithHeader:header];
 
+		struct segment_command_64 *textSegment = [patcher->_parser segmentWithName:@"__TEXT"];
 		struct segment_command_64 *dataConstSegment = [patcher->_parser segmentWithName:@"__DATA_CONST"];
 		struct segment_command_64 *dataSegment = [patcher->_parser segmentWithName:@"__DATA"];
 
+		patcher->_textSegment = textSegment;
+
+		patcher->_cStringTableSection = [patcher->_parser sectionInSegment:textSegment withName:@"__cstring"];
 		patcher->_cfstringTableSection = [patcher->_parser sectionInSegment:dataSegment withName:@"__cfstring"] ?: [patcher->_parser sectionInSegment:dataConstSegment withName:@"__cfstring"];
-
-		if (patcher->_cfstringTableSection) {
-			patcher->_cfstringTableSectionSize = patcher->_cfstringTableSection->size;
-		}
-
 		patcher->_globalTableSection = [patcher->_parser sectionInSegment:dataSegment withName:@"__data"];
-		if (patcher->_globalTableSection) {
-			patcher->_globalTableSectionSize = patcher->_globalTableSection->size;
-		}
 
 		patcher->_isDylib = header->filetype == MH_DYLIB;
 	}
@@ -52,8 +50,8 @@ struct __CFString {
 - (void)patchString:(NSString *)originalString toString:(NSString *)patchedString {
 	fprintf(stdout, "\t\"%s\" -> \"%s\"", originalString.UTF8String, patchedString.UTF8String);
 
-	uint64_t originalAddress = [self _getCStringAddress:originalString inNewSection:NO];
-	uint64_t replacementAddress = [self _getCStringAddress:patchedString inNewSection:YES];
+	const uint64_t originalAddress = [self _getCStringAddress:originalString];
+	const uint64_t replacementAddress = [[_replacementOffsetMap valueForKey:patchedString] unsignedLongLongValue];
 
 	if ((!originalAddress || !replacementAddress) || (replacementAddress == originalAddress)) return;
 
@@ -160,62 +158,22 @@ struct __CFString {
     }
 }
 
-- (uint64_t)_getCStringAddress:(NSString *)string inNewSection:(BOOL)inNewSection {
-	struct segment_command_64 *segment = [_parser segmentWithName:inNewSection ? @"__PATCH_ROOTLESS" : @"__TEXT"];
-	if (!segment) {
-		return 0x0;
-	}
-
-	struct section_64 *section = [_parser sectionInSegment:segment withName:@"__cstring"];
-	if (!section) {
-		return 0x0;
-	}
-
+- (uint64_t)_getCStringAddress:(NSString *)string {
 	const void *fileBytes = [_data bytes];
 
-	const char *cstring = (const char *)(fileBytes + section->offset);
-	const uint64_t mappedOffset = segment->vmaddr - segment->fileoff;
+	const char *cstring = (const char *)(fileBytes + _cStringTableSection->offset);
+	const uint64_t mappedOffset = _textSegment->vmaddr - _textSegment->fileoff;
 
+	// Rewrite this
 	while (*cstring != '\0') {
-		if (!strcmp(cstring, string.UTF8String)) {
+		if (strcmp(cstring, string.UTF8String) == 0) {
 			return ((uint64_t)cstring - (uint64_t)fileBytes) + mappedOffset;
 		}
 		cstring += strlen(cstring) + 1;
 	}
 
-	uint8_t *address = [self _bh_memmemWithHaystack:fileBytes haystackLength:0x100000 needle:(const uint8_t *)[string UTF8String] needleLength:[string length]];
+	const uint8_t *address = memmem(fileBytes, 0x100000, (const uint8_t *)[string UTF8String], [string length]);
 	return address ? (uint64_t)address - (uint64_t)fileBytes : 0x0;
-}
-
-- (uint8_t *)_bh_memmemWithHaystack:(const uint8_t *)haystack haystackLength:(size_t)hlen needle:(const uint8_t *)needle needleLength:(size_t)nlen {
-	size_t skip[256];
-
-    if (nlen <= 0 || !haystack || !needle) {
-		return NULL;
-	}
-
-    for (size_t scan = 0; scan <= 255; scan = scan + 1) {
-		skip[scan] = nlen;
-	}
-
-    size_t last = nlen - 1;
-
-    for (size_t scan = 0; scan < last; scan = scan + 1) {
-		skip[needle[scan]] = last - scan;
-	}
-
-    while (hlen >= nlen) {
-        for (size_t scan = last; haystack[scan] == needle[scan]; scan = scan - 1) {
-            if (scan == 0) {
-				return (void *)haystack;
-			}
-		}
-
-        hlen -= skip[haystack[last]];
-        haystack += skip[haystack[last]];
-    }
-
-    return NULL;
 }
 
 - (NSData *)data {
