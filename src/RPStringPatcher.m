@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
-#import "Headers/StringPatcher.h"
-#import "Headers/MachOParser.h"
+#import "Headers/RPStringPatcher.h"
+#import "Headers/RPMachOParser.h"
 #import "Headers/assembler.h"
 
 struct __CFString {
@@ -10,10 +10,10 @@ struct __CFString {
 	uint64_t length;
 } __attribute__((aligned(0x8)));
 
-@implementation StringPatcher {
+@implementation RPStringPatcher {
 	NSMutableData *_data;
 	NSDictionary<NSString *, NSNumber *> *_replacementOffsetMap;
-	MachOParser *_parser;
+	RPMachOParser *_parser;
 	struct segment_command_64 *_textSegment;
 	struct section_64 *_cfstringTableSection;
 	struct section_64 *_globalTableSection;
@@ -22,14 +22,14 @@ struct __CFString {
 }
 
 + (instancetype)patcherWithData:(NSData *)data replacementOffsetMap:(NSDictionary<NSString *, NSNumber *> *)offsetMap {
-	StringPatcher *const patcher = [StringPatcher new];
+	RPStringPatcher *const patcher = [RPStringPatcher new];
 
 	if (patcher) {
 		patcher->_data = [data mutableCopy];
 		patcher->_replacementOffsetMap = offsetMap;
 
 		struct mach_header_64 *header = (struct mach_header_64 *)[patcher->_data bytes];
-		patcher->_parser = [MachOParser parserWithHeader:header];
+		patcher->_parser = [RPMachOParser parserWithHeader:header];
 
 		struct segment_command_64 *textSegment = [patcher->_parser segmentWithName:@"__TEXT"];
 		struct segment_command_64 *dataConstSegment = [patcher->_parser segmentWithName:@"__DATA_CONST"];

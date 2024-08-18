@@ -1,14 +1,14 @@
 #import <mach-o/loader.h>
 #import <mach-o/fat.h>
 #import <Foundation/Foundation.h>
-#import "Headers/DirectoryScanner.h"
+#import "Headers/RPDirectoryScanner.h"
 
-@implementation DirectoryScanner {
+@implementation RPDirectoryScanner {
 	NSString *_directory;
 }
 
-+ (instancetype)directoryScannerWithDirectory:(NSString *)directory {
-	DirectoryScanner *const scanner = [DirectoryScanner new];
++ (instancetype)scannerWithDirectory:(NSString *)directory {
+	RPDirectoryScanner *const scanner = [RPDirectoryScanner new];
 
 	if (scanner) {
 		scanner->_directory = directory;

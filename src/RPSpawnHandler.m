@@ -1,8 +1,8 @@
 #import <spawn.h>
 #import <Foundation/Foundation.h>
-#import "Headers/SpawnHandler.h"
+#import "Headers/RPSpawnHandler.h"
 
-@implementation SpawnHandler
+@implementation RPSpawnHandler
 
 + (int)spawnWithArguments:(NSArray<NSString *> *)arguments {
 	extern char **environ;
@@ -22,10 +22,6 @@
 	waitpid(pid, NULL, 0);
 
 	return status;
-}
-
-+ (NSString *)errorForCode:(int)returnCode {
-	return [NSString stringWithUTF8String:strerror(returnCode)];
 }
 
 @end

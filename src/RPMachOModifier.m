@@ -1,25 +1,25 @@
 #import <mach-o/loader.h>
 #import <mach-o/fixup-chains.h>
 #import <Foundation/Foundation.h>
-#import "Headers/MachOModifier.h"
-#import "Headers/MachOParser.h"
-#import "Headers/StringPatcher.h"
+#import "Headers/RPMachOModifier.h"
+#import "Headers/RPMachOParser.h"
+#import "Headers/RPStringPatcher.h"
 
-@implementation MachOModifier {
+@implementation RPMachOModifier {
 	NSMutableData *_fileData;
-	MachOParser *_parser;
+	RPMachOParser *_parser;
 	NSString *_filePath;
 	NSMutableDictionary *_replacementOffsetMap;
 }
 
 + (instancetype)modifierWithFile:(NSString *)file {
-	MachOModifier *const modifier = [MachOModifier new];
+	RPMachOModifier *const modifier = [RPMachOModifier new];
 
 	if (modifier) {
 		NSMutableData *const data = [NSMutableData dataWithContentsOfFile:file];
 
 		modifier->_fileData = data;
-		modifier->_parser = [MachOParser parserWithHeader:(struct mach_header_64 *)[data bytes]];
+		modifier->_parser = [RPMachOParser parserWithHeader:(struct mach_header_64 *)[data bytes]];
 		modifier->_filePath = file;
 
 		modifier->_replacementOffsetMap = [NSMutableDictionary dictionary];
@@ -113,7 +113,7 @@
 }
 
 - (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	StringPatcher *const patcher = [StringPatcher patcherWithData:_fileData replacementOffsetMap:_replacementOffsetMap];
+	RPStringPatcher *const patcher = [RPStringPatcher patcherWithData:_fileData replacementOffsetMap:_replacementOffsetMap];
 
 	for (NSString *originalString in stringMap) {
 		NSString *const patchedString = [stringMap objectForKey:originalString];

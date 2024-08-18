@@ -2,7 +2,7 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSDictionary.h>
 
-@interface PlistHandler : NSObject
+@interface RPPlistHandler : NSObject
 + (nullable instancetype)handlerWithPlistFile:(nonnull NSString *)file;
 - (void)convertStringsUsingConversionRuleset:(nonnull NSDictionary<NSString *, id> *)conversionRuleset;
 - (nonnull NSDictionary *)plistContainer;

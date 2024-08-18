@@ -1,8 +1,8 @@
 #import <Foundation/Foundation.h>
-#import "Headers/MachOMerger.h"
-#import "Headers/SpawnHandler.h"
+#import "Headers/RPMachOMerger.h"
+#import "Headers/RPSpawnHandler.h"
 
-@implementation MachOMerger
+@implementation RPMachOMerger
 
 + (int)mergeMachOsAtPaths:(NSArray<NSString *> *)paths outputPath:(NSString *)outputPath {
 	NSMutableArray *const args = [NSMutableArray array];
@@ -12,7 +12,7 @@
 	[args addObject:outputPath];
 	[args addObject:@"-create"];
 
-	return [SpawnHandler spawnWithArguments:args];
+	return [RPSpawnHandler spawnWithArguments:args];
 }
 
 @end

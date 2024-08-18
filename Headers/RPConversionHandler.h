@@ -1,7 +1,7 @@
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 
-@interface ConversionHandler : NSObject
+@interface RPConversionHandler : NSObject
 + (nullable instancetype)handlerWithConversionRuleset:(nonnull NSDictionary *)conversionRuleset;
 - (BOOL)shouldConvertString:(nonnull NSString *)string;
 - (nonnull NSString *)convertedStringForString:(nonnull NSString *)string;

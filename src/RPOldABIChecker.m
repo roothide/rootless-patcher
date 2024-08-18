@@ -1,9 +1,9 @@
 #import <mach-o/loader.h>
 #import <mach-o/fat.h>
 #import <Foundation/Foundation.h>
-#import "Headers/OldABIChecker.h"
+#import "Headers/RPOldABIChecker.h"
 
-@implementation OldABIChecker
+@implementation RPOldABIChecker
 
 + (BOOL)containsOldABI:(NSData *)machO {
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[machO bytes];

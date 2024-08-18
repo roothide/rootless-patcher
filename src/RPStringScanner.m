@@ -1,19 +1,19 @@
 #import <Foundation/Foundation.h>
-#import "Headers/StringScanner.h"
-#import "Headers/MachOParser.h"
-#import "Headers/ConversionHandler.h"
+#import "Headers/RPStringScanner.h"
+#import "Headers/RPMachOParser.h"
+#import "Headers/RPConversionHandler.h"
 
-@implementation StringScanner {
+@implementation RPStringScanner {
 	NSData *_fileData;
-	ConversionHandler *_conversionHandler;
+	RPConversionHandler *_conversionHandler;
 }
 
-+ (instancetype)stringScannerWithFile:(NSString *)file conversionRuleset:(NSDictionary *)conversionRuleset {
-	StringScanner *const scanner = [StringScanner new];
++ (instancetype)scannerWithFile:(NSString *)file conversionRuleset:(NSDictionary *)conversionRuleset {
+	RPStringScanner *const scanner = [RPStringScanner new];
 
 	if (scanner) {
 		scanner->_fileData = [NSData dataWithContentsOfFile:file];
-		scanner->_conversionHandler = [ConversionHandler handlerWithConversionRuleset:conversionRuleset];
+		scanner->_conversionHandler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
 	}
 
 	return scanner;
@@ -48,7 +48,7 @@
 	NSMutableArray *const originalStrings = [NSMutableArray array];
 
 	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
-	MachOParser *const parser = [MachOParser parserWithHeader:header];
+	RPMachOParser *const parser = [RPMachOParser parserWithHeader:header];
 
 	struct segment_command_64 *textSegment = [parser segmentWithName:@"__TEXT"];
 	if (!textSegment) {
@@ -88,7 +88,7 @@
 	NSMutableArray *const originalStrings = [NSMutableArray array];
 
 	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
-	MachOParser *const parser = [MachOParser parserWithHeader:header];
+	RPMachOParser *const parser = [RPMachOParser parserWithHeader:header];
 
 	struct segment_command_64 *dataSegment = [parser segmentWithName:@"__DATA"];
 	if (!dataSegment) {

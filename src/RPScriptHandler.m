@@ -1,9 +1,9 @@
 #import <Foundation/Foundation.h>
 #import <rootless.h>
-#import "Headers/ScriptHandler.h"
-#import "Headers/SpawnHandler.h"
+#import "Headers/RPScriptHandler.h"
+#import "Headers/RPSpawnHandler.h"
 
-@implementation ScriptHandler
+@implementation RPScriptHandler
 
 + (BOOL)handleScriptForFile:(NSString *)file {
 	NSError *error = nil;
@@ -40,14 +40,14 @@
 
 	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
 
-	const int scriptStatus = [SpawnHandler spawnWithArguments:@[
+	const int scriptStatus = [RPSpawnHandler spawnWithArguments:@[
 		@"sh",
 		scriptPath,
 		temporaryDebPath
 	]];
 
 	if (scriptStatus != 0) {
-		fprintf(stderr, "[-] Failed to execute script: %s. Error: %s\n", scriptPath.fileSystemRepresentation, [SpawnHandler errorForCode:scriptStatus].UTF8String);
+		fprintf(stderr, "[-] Failed to execute script: %s\n", scriptPath.fileSystemRepresentation);
 		return NO;
 	}
 

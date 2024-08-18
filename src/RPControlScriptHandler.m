@@ -1,13 +1,13 @@
 #import <Foundation/Foundation.h>
-#import "Headers/ControlScriptHandler.h"
-#import "Headers/ConversionHandler.h"
+#import "Headers/RPControlScriptHandler.h"
+#import "Headers/RPConversionHandler.h"
 
-@implementation ControlScriptHandler {
+@implementation RPControlScriptHandler {
 	NSString *_fileContents;
 }
 
 + (instancetype)handlerWithControlScriptFile:(NSString *)controlScriptFile {
-	ControlScriptHandler *const handler = [ControlScriptHandler new];
+	RPControlScriptHandler *const handler = [RPControlScriptHandler new];
 
 	if (handler) {
 		NSError *error = nil;
@@ -22,7 +22,7 @@
 }
 
 - (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, NSString *> *)conversionRuleset {
-	ConversionHandler *const handler = [ConversionHandler handlerWithConversionRuleset:conversionRuleset];
+	RPConversionHandler *const handler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
 
 	NSArray *const separatedComponents = [_fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \n\""]];
 	NSMutableDictionary *const convertedStrings = [NSMutableDictionary dictionary];

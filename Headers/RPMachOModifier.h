@@ -1,7 +1,7 @@
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 
-@interface MachOModifier : NSObject
+@interface RPMachOModifier : NSObject
 + (nullable instancetype)modifierWithFile:(nonnull NSString *)file;
 - (void)addSegment:(nonnull NSString *)segname withSection:(nonnull NSString *)sectname withStringMap:(nonnull NSDictionary<NSString *, NSString *> *)stringMap;
 - (void)rebaseStringsWithStringMap:(nonnull NSDictionary<NSString *, NSString *> *)stringMap;

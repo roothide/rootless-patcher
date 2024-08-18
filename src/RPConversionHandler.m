@@ -1,14 +1,14 @@
 #import <Foundation/Foundation.h>
-#import "Headers/ConversionHandler.h"
+#import "Headers/RPConversionHandler.h"
 
-@implementation ConversionHandler {
+@implementation RPConversionHandler {
 	NSArray *_blacklist;
 	NSDictionary *_specialCases;
 	NSArray *_bootstrapList;
 }
 
 + (instancetype)handlerWithConversionRuleset:(NSDictionary *)conversionRuleset {
-	ConversionHandler *const handler = [ConversionHandler new];
+	RPConversionHandler *const handler = [RPConversionHandler new];
 
 	if (handler) {
 		handler->_blacklist = [conversionRuleset objectForKey:@"Blacklist"];

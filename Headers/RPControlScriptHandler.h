@@ -1,7 +1,7 @@
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 
-@interface ControlScriptHandler : NSObject
+@interface RPControlScriptHandler : NSObject
 + (nullable instancetype)handlerWithControlScriptFile:(nonnull NSString *)controlScriptFile;
 - (void)convertStringsUsingConversionRuleset:(nonnull NSDictionary<NSString *, id> *)conversionRuleset;
 - (nonnull NSString *)fileContents;

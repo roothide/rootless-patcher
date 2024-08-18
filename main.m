@@ -1,17 +1,17 @@
 #import <Foundation/Foundation.h>
 #import <rootless.h>
-#import "Headers/ScriptHandler.h"
-#import "Headers/DirectoryScanner.h"
-#import "Headers/MachOThinner.h"
-#import "Headers/StringScanner.h"
-#import "Headers/MachOModifier.h"
-#import "Headers/OldABIChecker.h"
-#import "Headers/PlistHandler.h"
-#import "Headers/ControlScriptHandler.h"
-#import "Headers/ControlParser.h"
-#import "Headers/CodesignHandler.h"
-#import "Headers/MachOMerger.h"
-#import "Headers/SpawnHandler.h"
+#import "Headers/RPScriptHandler.h"
+#import "Headers/RPDirectoryScanner.h"
+#import "Headers/RPMachOThinner.h"
+#import "Headers/RPStringScanner.h"
+#import "Headers/RPMachOModifier.h"
+#import "Headers/RPOldABIChecker.h"
+#import "Headers/RPPlistHandler.h"
+#import "Headers/RPControlScriptHandler.h"
+#import "Headers/RPControlParser.h"
+#import "Headers/RPCodesignHandler.h"
+#import "Headers/RPMachOMerger.h"
+#import "Headers/RPSpawnHandler.h"
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -36,7 +36,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			return EXIT_FAILURE;
 		}
 
-		const BOOL handleScript = [ScriptHandler handleScriptForFile:debPath];
+		const BOOL handleScript = [RPScriptHandler handleScriptForFile:debPath];
 		if (!handleScript) {
 			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
 			return EXIT_FAILURE;
@@ -49,13 +49,13 @@ int main(int argc, char *argv[], char *envp[]) {
 			return EXIT_FAILURE;
 		}
 
-		DirectoryScanner *const directoryScanner = [DirectoryScanner directoryScannerWithDirectory:patchWorkingDirectory];
+		RPDirectoryScanner *const directoryScanner = [RPDirectoryScanner scannerWithDirectory:patchWorkingDirectory];
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
 		NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
 		NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
 		NSString *const controlFile = [directoryScanner controlFile];
 
-		NSDictionary *const allThinnedMachOs = [MachOThinner thinnedMachOsFromPaths:machOFiles];
+		NSDictionary *const allThinnedMachOs = [RPMachOThinner thinnedMachOsFromPaths:machOFiles];
 
 		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
 		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
@@ -76,17 +76,17 @@ int main(int argc, char *argv[], char *envp[]) {
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {
-				StringScanner *const stringScanner = [StringScanner stringScannerWithFile:file conversionRuleset:conversionRuleset];
+				RPStringScanner *const stringScanner = [RPStringScanner scannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
 
-				MachOModifier *const modifier = [MachOModifier modifierWithFile:file];
+				RPMachOModifier *const modifier = [RPMachOModifier modifierWithFile:file];
 				[modifier addSegment:@"__PATCH_ROOTLESS" withSection:@"__cstring" withStringMap:stringMap];
 				[modifier rebaseStringsWithStringMap:stringMap];
 
 				NSData *const data = [modifier data];
 				[data writeToFile:file options:NSDataWritingAtomic error:nil];
 
-				if (!containsOldABI && [OldABIChecker containsOldABI:data]) {
+				if (!containsOldABI && [RPOldABIChecker containsOldABI:data]) {
 					containsOldABI = YES;
 				}
 			}
@@ -98,9 +98,9 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			const int machOMergeStatus = [MachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
+			const int machOMergeStatus = [RPMachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
 			if (machOMergeStatus != 0) {
-				fprintf(stderr, "[-] Failed to merge Mach-O's: %s. Error: %s\n", thinnedMachOs.description.UTF8String, [SpawnHandler errorForCode:machOMergeStatus].UTF8String);
+				fprintf(stderr, "[-] Failed to merge Mach-O's: %s\n", thinnedMachOs.description.UTF8String);
 				break;
 			}
 
@@ -111,9 +111,9 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			const int addCodesignStatus = [CodesignHandler addCodesignToFile:fatMachO];
+			const int addCodesignStatus = [RPCodesignHandler addCodesignToFile:fatMachO];
 			if (addCodesignStatus != 0) {
-				fprintf(stderr, "[-] Failed to add code signature to file at path: %s. Error: %s\n", fatMachO.fileSystemRepresentation, [SpawnHandler errorForCode:addCodesignStatus].UTF8String);
+				fprintf(stderr, "[-] Failed to add code signature to file at path: %s\n", fatMachO.fileSystemRepresentation);
 				break;
 			}
 
@@ -140,7 +140,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			return EXIT_FAILURE;
 		}
 
-		ControlParser *const controlParser = [ControlParser parserWithControlFile:controlFile];
+		RPControlParser *const controlParser = [RPControlParser parserWithControlFile:controlFile];
 		if (containsOldABI) {
 			NSMutableArray *const dependencies = [controlParser controlValueForKey:@"Depends"];
 			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
@@ -177,7 +177,7 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			PlistHandler *const handler = [PlistHandler handlerWithPlistFile:plist];
+			RPPlistHandler *const handler = [RPPlistHandler handlerWithPlistFile:plist];
 			[handler convertStringsUsingConversionRuleset:conversionRuleset];
 
 			[[handler plistContainer] writeToFile:plist atomically:YES];
@@ -202,7 +202,7 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			ControlScriptHandler *const handler = [ControlScriptHandler handlerWithControlScriptFile:controlScriptFile];
+			RPControlScriptHandler *const handler = [RPControlScriptHandler handlerWithControlScriptFile:controlScriptFile];
 			[handler convertStringsUsingConversionRuleset:conversionRuleset];
 
 			error = nil;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
-		const int dpkgDebStatus = [SpawnHandler spawnWithArguments:@[
+		const int dpkgDebStatus = [RPSpawnHandler spawnWithArguments:@[
 			@"dpkg-deb",
 			@"-b",
 			patchWorkingDirectory,
@@ -233,7 +233,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		]];
 
 		if (dpkgDebStatus != 0) {
-			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb. Error: %s", [SpawnHandler errorForCode:dpkgDebStatus].UTF8String);
+			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb");
 		}
 
 		error = nil;

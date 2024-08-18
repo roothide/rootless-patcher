@@ -1,15 +1,15 @@
 #import <mach-o/loader.h>
 #import <mach-o/fat.h>
 #import <Foundation/Foundation.h>
-#import "Headers/MachOThinner.h"
+#import "Headers/RPMachOThinner.h"
 
-@implementation MachOThinner
+@implementation RPMachOThinner
 
 + (NSDictionary *)thinnedMachOsFromPaths:(NSArray<NSString *> *)paths {
 	NSMutableDictionary *const thinnedMachOs = [NSMutableDictionary dictionary];
 
 	for (NSString *path in paths) {
-		NSArray *const thinnedMachO = [MachOThinner _thinnedMachOsFromPath:path];
+		NSArray *const thinnedMachO = [RPMachOThinner _thinnedMachOsFromPath:path];
 		[thinnedMachOs setObject:thinnedMachO forKey:path];
 	}
 
@@ -24,12 +24,12 @@
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[data bytes];
 
 	if (OSSwapBigToHostInt32(header->magic) == FAT_MAGIC) {
-		NSArray<NSString *> *const thinnedMachOsFromFAT = [MachOThinner _thinnedMachOsFromFAT:path];
+		NSArray<NSString *> *const thinnedMachOsFromFAT = [RPMachOThinner _thinnedMachOsFromFAT:path];
 		for (NSString *thinnedMachO in thinnedMachOsFromFAT) {
 			[thinnedMachOs addObject:thinnedMachO];
 		}
 	} else if (OSSwapBigToHostInt32(header->magic) == MH_MAGIC_64) {
-		NSString *const thinnedPath = [MachOThinner _thinnedPathForPath:path cpusubtype:header->cpusubtype];
+		NSString *const thinnedPath = [RPMachOThinner _thinnedPathForPath:path cpusubtype:header->cpusubtype];
 
 		NSError *error = nil;
 		const BOOL success = [data writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
@@ -59,7 +59,7 @@
 			const NSRange sliceRange = NSMakeRange(OSSwapBigToHostInt32(arch->offset), OSSwapBigToHostInt32(arch->size));
 			NSData *const subdata = [data subdataWithRange:sliceRange];
 
-			NSString *const thinnedPath = [MachOThinner _thinnedPathForPath:path cpusubtype:mh->cpusubtype];
+			NSString *const thinnedPath = [RPMachOThinner _thinnedPathForPath:path cpusubtype:mh->cpusubtype];
 
 			NSError *error = nil;
 			const BOOL success = [subdata writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
@@ -79,7 +79,7 @@
 
 + (NSString *)_thinnedPathForPath:(NSString *)path cpusubtype:(cpu_subtype_t)cpusubtype {
 	NSString *const name = [path lastPathComponent];
-	NSString *const subtype = [MachOThinner _stringFromCpuSubtype:cpusubtype];
+	NSString *const subtype = [RPMachOThinner _stringFromCpuSubtype:cpusubtype];
 	return [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@", subtype, name]];
 }
 

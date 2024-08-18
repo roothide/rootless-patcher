@@ -1,11 +1,11 @@
 #import <Foundation/Foundation.h>
-#import "Headers/CodesignHandler.h"
-#import "Headers/SpawnHandler.h"
+#import "Headers/RPCodesignHandler.h"
+#import "Headers/RPSpawnHandler.h"
 
-@implementation CodesignHandler
+@implementation RPCodesignHandler
 
 + (int)removeCodesignFromFile:(NSString *)file {
-	return [SpawnHandler spawnWithArguments:@[
+	return [RPSpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-r",
 		file
@@ -13,7 +13,7 @@
 }
 
 + (int)addCodesignToFile:(NSString *)file {
-	return [SpawnHandler spawnWithArguments:@[
+	return [RPSpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-S",
 		file

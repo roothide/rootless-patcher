@@ -1,12 +1,12 @@
 #import <Foundation/Foundation.h>
-#import "Headers/MachOParser.h"
+#import "Headers/RPMachOParser.h"
 
-@implementation MachOParser {
+@implementation RPMachOParser {
 	struct mach_header_64 *_header;
 }
 
-+ (MachOParser *)parserWithHeader:(struct mach_header_64 *)header {
-	MachOParser *const parser = [MachOParser new];
++ (instancetype)parserWithHeader:(struct mach_header_64 *)header {
+	RPMachOParser *const parser = [RPMachOParser new];
 
 	if (parser) {
 		parser->_header = header;

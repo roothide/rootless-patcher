@@ -2,7 +2,7 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSDictionary.h>
 
-@interface ControlParser : NSObject
+@interface RPControlParser : NSObject
 + (nullable instancetype)parserWithControlFile:(nonnull NSString *)controlFile;
 - (nonnull NSString *)controlFileAsString;
 - (void)setControlValue:(nonnull id)value forKey:(nonnull NSString *)key;

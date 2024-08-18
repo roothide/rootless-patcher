@@ -1,14 +1,14 @@
 #import <Foundation/Foundation.h>
-#import "Headers/PlistHandler.h"
-#import "Headers/ConversionHandler.h"
+#import "Headers/RPPlistHandler.h"
+#import "Headers/RPConversionHandler.h"
 
-@implementation PlistHandler {
+@implementation RPPlistHandler {
 	id _plistContainer;
-	ConversionHandler *_conversionHandler;
+	RPConversionHandler *_conversionHandler;
 }
 
 + (instancetype)handlerWithPlistFile:(NSString *)file {
-	PlistHandler *const handler = [PlistHandler new];
+	RPPlistHandler *const handler = [RPPlistHandler new];
 
 	if (handler) {
 		NSData *const data = [NSData dataWithContentsOfFile:file];
@@ -19,7 +19,7 @@
 }
 
 - (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, id> *)conversionRuleset {
-	_conversionHandler = [ConversionHandler handlerWithConversionRuleset:conversionRuleset];
+	_conversionHandler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
 	[self _patchStringValues:_plistContainer];
 }
 

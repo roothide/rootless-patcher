@@ -1,13 +1,13 @@
 #import <Foundation/Foundation.h>
-#import "Headers/ControlParser.h"
+#import "Headers/RPControlParser.h"
 
-@implementation ControlParser {
+@implementation RPControlParser {
 	NSMutableArray *_keys;
 	NSMutableDictionary *_dictionary;
 }
 
 + (instancetype)parserWithControlFile:(NSString *)controlFile {
-	ControlParser *const parser = [ControlParser new];
+	RPControlParser *const parser = [RPControlParser new];
 
 	if (parser) {
 		NSError *error = nil;

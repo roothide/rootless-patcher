@@ -3,6 +3,6 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 
-@interface MachOThinner : NSObject
+@interface RPMachOThinner : NSObject
 + (nonnull NSDictionary *)thinnedMachOsFromPaths:(nonnull NSArray<NSString *> *)paths;
 @end
