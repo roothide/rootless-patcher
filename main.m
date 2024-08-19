@@ -245,7 +245,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			}
 		}
 
-		fprintf(stdout, "[+] Finishing control file portion...\n");
+		fprintf(stdout, "[+] Finishing control script file portion...\n");
 
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
