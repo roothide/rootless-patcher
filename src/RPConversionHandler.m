@@ -81,7 +81,7 @@
 	} else if ([string hasPrefix:@"/"]) {
 		return [@"/var/jb" stringByAppendingString:convertedString];
 	} else {
-		return [@"var/jb" stringByAppendingString:convertedString];
+		return [@"var/jb/" stringByAppendingString:convertedString];
 	}
 }
 

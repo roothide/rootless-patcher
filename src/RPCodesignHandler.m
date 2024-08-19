@@ -20,4 +20,12 @@
 	]];
 }
 
++ (int)addCodesignToFile:(NSString *)file entitlementsPath:(NSString *)entitlementsPath {
+	return [RPSpawnHandler spawnWithArguments:@[
+		@"ldid",
+		[@"-S" stringByAppendingString:entitlementsPath],
+		file
+	]];
+}
+
 @end

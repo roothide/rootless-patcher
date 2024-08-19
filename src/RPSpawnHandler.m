@@ -5,23 +5,40 @@
 @implementation RPSpawnHandler
 
 + (int)spawnWithArguments:(NSArray<NSString *> *)arguments {
-	extern char **environ;
-	pid_t pid;
+	return [RPSpawnHandler spawnWithArguments:arguments stdoutPath:nil stderrPath:nil];
+}
 
-	const NSUInteger arraySize = [arguments count];
++ (int)spawnWithArguments:(NSArray<NSString *> *)arguments stdoutPath:(NSString *)stdoutPath stderrPath:(NSString *)stderrPath {
+    extern char **environ;
+    pid_t pid;
 
-	char **argumentsC = (char **)malloc(arraySize * sizeof(char *) + 1);
-	for (NSUInteger i = 0; i < arraySize; i++) {
-		argumentsC[i] = (char *)[arguments[i] UTF8String];
-	}
-	argumentsC[arraySize] = NULL;
+    posix_spawn_file_actions_t actions = NULL;
+    if (stdoutPath || stderrPath) {
+        posix_spawn_file_actions_init(&actions);
+    }
 
-	int status = posix_spawnp(&pid, argumentsC[0], NULL, NULL, (char *const *)argumentsC, environ);
-	free((void *)argumentsC);
+    if (stdoutPath) {
+        posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, stdoutPath.fileSystemRepresentation, O_WRONLY | O_CREAT, 0644);
+    }
 
-	waitpid(pid, NULL, 0);
+    if (stderrPath) {
+        posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, stderrPath.fileSystemRepresentation, O_WRONLY | O_CREAT, 0644);
+    }
 
-	return status;
+    const NSUInteger arraySize = [arguments count];
+
+	const char **const argumentsC = malloc(arraySize * sizeof(char *) + 1);
+    for (NSUInteger i = 0; i < arraySize; i++) {
+        argumentsC[i] = [arguments[i] UTF8String];
+    }
+    argumentsC[arraySize] = NULL;
+
+    int status = posix_spawnp(&pid, argumentsC[0], &actions, NULL, (char *const *)argumentsC, environ);
+    free((void *)argumentsC);
+
+    waitpid(pid, NULL, 0);
+
+    return status;
 }
 
 @end

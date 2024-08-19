@@ -2,8 +2,6 @@
 
 set -e
 
-LDID="ldid -Hsha256"
-
 if [ -z "${1}" ] || [ ! -f "${1}" ] | grep -q "Debian binary package" ; then
     echo "[-] Usage: $0 [/path/to/deb]"
     exit 1;
@@ -65,7 +63,7 @@ find "${TEMPDIR_NEW}" -type f | while read -r file; do
     if otool -L "${file}" | grep -q CepheiPrefs.framework; then
         install_name_tool -change /usr/lib/CepheiPrefs.framework/CepheiPrefs @rpath/CepheiPrefs.framework/CepheiPrefs "${file}" >/dev/null 2>&1
     fi
-    
+
     if otool -L "${file}" | grep -q Cephei.framework; then
         install_name_tool -change /usr/lib/Cephei.framework/Cephei @rpath/Cephei.framework/Cephei "${file}" >/dev/null 2>&1
     fi
@@ -92,9 +90,7 @@ find "${TEMPDIR_NEW}" -type f | while read -r file; do
     install_name_tool -add_rpath "/var/jb/usr/local/lib" "${file}" >/dev/null 2>&1
     install_name_tool -add_rpath "/var/jb/Library/Frameworks" "${file}" >/dev/null 2>&1
     install_name_tool -add_rpath "/var/jb/Library/PreferenceBundles" "${file}" >/dev/null 2>&1
-
-    $LDID -S "${file}"
-
+    
     echo "[+] Success!"
   fi
 done

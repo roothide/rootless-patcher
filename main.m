@@ -8,7 +8,7 @@
 #import "Headers/RPOldABIChecker.h"
 #import "Headers/RPPlistHandler.h"
 #import "Headers/RPControlScriptHandler.h"
-#import "Headers/RPControlParser.h"
+#import "Headers/RPControlHandler.h"
 #import "Headers/RPCodesignHandler.h"
 #import "Headers/RPMachOMerger.h"
 #import "Headers/RPSpawnHandler.h"
@@ -73,9 +73,25 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		error = nil;
 		for (NSString *fatMachO in allThinnedMachOs) {
+			NSString *const entitlementsPath = [[fatMachO stringByDeletingPathExtension] stringByAppendingString:@"_ents.plist"];
+
+			const int entitlementsSuccess = [RPSpawnHandler spawnWithArguments:@[
+				@"ldid",
+				@"-e",
+				fatMachO
+			] stdoutPath:entitlementsPath stderrPath:nil];
+
+			if (entitlementsSuccess != 0) {
+				fprintf(stderr, "[-] Failed to get entitlements of path: %s\n", fatMachO.fileSystemRepresentation);
+			}
+
+			const BOOL hasEntitlements = [[NSString stringWithContentsOfFile:entitlementsPath encoding:NSUTF8StringEncoding error:nil] length] > 0;
+
 			NSArray<NSString *> *const thinnedMachOs = [allThinnedMachOs objectForKey:fatMachO];
 
 			for (NSString *file in thinnedMachOs) {
+				[RPCodesignHandler removeCodesignFromFile:file];
+
 				RPStringScanner *const stringScanner = [RPStringScanner scannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
 
@@ -111,7 +127,9 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			const int addCodesignStatus = [RPCodesignHandler addCodesignToFile:fatMachO];
+			fprintf(stdout, "[+] Checking if %s has entitlements... %s\n", fatMachO.fileSystemRepresentation, hasEntitlements ? "YES" : "NO");
+
+			const int addCodesignStatus = hasEntitlements ? [RPCodesignHandler addCodesignToFile:fatMachO entitlementsPath:entitlementsPath] : [RPCodesignHandler addCodesignToFile:fatMachO];
 			if (addCodesignStatus != 0) {
 				fprintf(stderr, "[-] Failed to add code signature to file at path: %s\n", fatMachO.fileSystemRepresentation);
 				break;
@@ -124,6 +142,12 @@ int main(int argc, char *argv[], char *envp[]) {
 					fprintf(stderr, "[-] Failed to remove file at path: %s\n", file.fileSystemRepresentation);
 					break;
 				}
+			}
+
+			const BOOL removeEntitlementsFileSuccess = [fileManager removeItemAtPath:entitlementsPath error:&error];
+			if (!removeEntitlementsFileSuccess) {
+				fprintf(stderr, "[-] Failed to remove file at path: %s\n", entitlementsPath.fileSystemRepresentation);
+				break;
 			}
 		}
 
@@ -140,19 +164,19 @@ int main(int argc, char *argv[], char *envp[]) {
 			return EXIT_FAILURE;
 		}
 
-		RPControlParser *const controlParser = [RPControlParser parserWithControlFile:controlFile];
+		RPControlHandler *const controlHandler = [RPControlHandler handlerWithControlFile:controlFile];
 		if (containsOldABI) {
-			NSMutableArray *const dependencies = [controlParser controlValueForKey:@"Depends"];
+			NSMutableArray *const dependencies = [controlHandler controlValueForKey:@"Depends"];
 			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
 		}
 
-		[controlParser setControlValue:@"iphoneos-arm64" forKey:@"Architecture"];
+		[controlHandler setControlValue:@"iphoneos-arm64" forKey:@"Architecture"];
 
-		NSString *const packageID = [controlParser controlValueForKey:@"Package"];
-		NSString *const packageVersion = [controlParser controlValueForKey:@"Version"];
+		NSString *const packageID = [controlHandler controlValueForKey:@"Package"];
+		NSString *const packageVersion = [controlHandler controlValueForKey:@"Version"];
 
 		error = nil;
-		const BOOL writeSuccess = [[controlParser controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+		const BOOL writeSuccess = [[controlHandler controlFileAsString] writeToFile:controlFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 		if (!writeSuccess) {
 			fprintf(stderr, "[-] Failed to write to %s. Error: %s\n", controlFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
