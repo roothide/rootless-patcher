@@ -35,6 +35,7 @@
 				if ([_conversionHandler shouldConvertString:value]) {
 					NSString *const convertedString = [_conversionHandler convertedStringForString:value];
 					[dictionary setObject:convertedString forKey:key];
+					fprintf(stdout, "\t%s -> %s\n", ((NSString *)value).UTF8String, convertedString.UTF8String);
 				}
 			} else if ([value isKindOfClass:[NSMutableDictionary class]] || [value isKindOfClass:[NSMutableArray class]]) {
 				[self _patchStringValues:value];
@@ -50,6 +51,7 @@
 				if ([_conversionHandler shouldConvertString:value]) {
 					NSString *const convertedString = [_conversionHandler convertedStringForString:value];
 					array[i] = convertedString;
+					fprintf(stdout, "\t%s -> %s\n", ((NSString *)value).UTF8String, convertedString.UTF8String);
 				}
 			} else if ([value isKindOfClass:[NSMutableDictionary class]] || [value isKindOfClass:[NSMutableArray class]]) {
 				[self _patchStringValues:value];
