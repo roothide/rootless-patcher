@@ -169,7 +169,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			NSMutableArray *const dependencies = [controlHandler controlValueForKey:@"Depends"];
 			if ([dependencies isKindOfClass:[NSArray class]]) {
 				[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
-			} else if ([dependencies isKindOfClass:[NSString class]] {
+			} else if ([dependencies isKindOfClass:[NSString class]]) {
 				[controlHandler setControlValue:@[dependencies, @"cy+cpu.arm64v8 | oldabi-xina | oldabi"] forKey:@"Depends"];
 			}
 		}
