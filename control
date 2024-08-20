@@ -2,8 +2,10 @@ Package: com.nightwind.rootless-patcher
 Name: rootless-patcher
 Version: 0.0.1
 Architecture: iphoneos-arm
-Description: An awesome tool of some sort!!
+Description: A CLI rootful to rootless patcher.
+ Utilizes a technique that does not require Xina-style symlinks.
 Maintainer: Nightwind
-Author: Nightwind
+Author: Nightwind and staturnz
 Section: System
 Tag: role::hacker
+Depends: file, odcctools, fakeroot, ldid
