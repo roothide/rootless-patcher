@@ -167,7 +167,11 @@ int main(int argc, char *argv[], char *envp[]) {
 		RPControlHandler *const controlHandler = [RPControlHandler handlerWithControlFile:controlFile];
 		if (containsOldABI) {
 			NSMutableArray *const dependencies = [controlHandler controlValueForKey:@"Depends"];
-			[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
+			if ([dependencies isKindOfClass:[NSArray class]]) {
+				[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
+			} else if ([dependencies isKindOfClass:[NSString class]] {
+				[controlHandler setControlValue:@[dependencies, @"cy+cpu.arm64v8 | oldabi-xina | oldabi"] forKey:@"Depends"];
+			}
 		}
 
 		[controlHandler setControlValue:@"iphoneos-arm64" forKey:@"Architecture"];
