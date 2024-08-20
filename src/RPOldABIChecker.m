@@ -8,7 +8,7 @@
 + (BOOL)containsOldABI:(NSData *)machO {
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[machO bytes];
 
-	if (OSSwapBigToHostInt32(header->magic) == FAT_MAGIC) {
+	if (header->magic == FAT_MAGIC || header->magic == FAT_CIGAM) {
 		const struct fat_header *fatHeader = (const struct fat_header *)header;
 		struct fat_arch *arch = (struct fat_arch *)(fatHeader + sizeof(struct fat_header));
 
@@ -23,7 +23,7 @@
 
 			arch += 1;
 		}
-	} else if (OSSwapBigToHostInt32(header->magic) == MH_MAGIC_64) {
+	} else if (header->magic == MH_MAGIC_64 || header->magic == MH_CIGAM_64) {
 		if ((header->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
 			return !(header->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI);
 		}

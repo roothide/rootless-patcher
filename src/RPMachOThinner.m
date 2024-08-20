@@ -23,12 +23,12 @@
 
 	const struct mach_header_64 *header = (const struct mach_header_64 *)[data bytes];
 
-	if (OSSwapBigToHostInt32(header->magic) == FAT_MAGIC) {
+	if (header->magic == FAT_MAGIC || header->magic == FAT_CIGAM) {
 		NSArray<NSString *> *const thinnedMachOsFromFAT = [RPMachOThinner _thinnedMachOsFromFAT:path];
 		for (NSString *thinnedMachO in thinnedMachOsFromFAT) {
 			[thinnedMachOs addObject:thinnedMachO];
 		}
-	} else if (OSSwapBigToHostInt32(header->magic) == MH_MAGIC_64) {
+	} else if (header->magic == MH_MAGIC_64 || header->magic == MH_CIGAM_64) {
 		NSString *const thinnedPath = [RPMachOThinner _thinnedPathForPath:path cpusubtype:header->cpusubtype];
 
 		NSError *error = nil;

@@ -93,7 +93,7 @@
 }
 
 - (BOOL)_magicMatchesMachO:(uint32_t)magic {
-	return OSSwapBigToHostInt32(magic) == MH_MAGIC_64 || OSSwapBigToHostInt32(magic) == FAT_MAGIC;
+	return magic == MH_MAGIC_64 || magic == MH_CIGAM_64 || magic == FAT_MAGIC || magic == FAT_CIGAM;
 }
 
 @end
