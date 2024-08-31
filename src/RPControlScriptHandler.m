@@ -49,11 +49,6 @@
 		if ([handler shouldConvertString:stringToConvert]) {
 			NSString *const convertedString = [handler convertedStringForString:stringToConvert];
 			[convertedStrings setObject:convertedString forKey:stringToConvert];
-			fprintf(stdout, "\t%s -> %s\n", stringToConvert.UTF8String, convertedString.UTF8String);
-		}
-
-		if ([stringToConvert isEqualToString:string]) {
-			i += 1;
 		}
 	}
 

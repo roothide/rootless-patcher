@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <rootless.h>
+#import <mach-o/loader.h>
+#import "Headers/RPRepackHandler.h"
 #import "Headers/RPScriptHandler.h"
 #import "Headers/RPDirectoryScanner.h"
 #import "Headers/RPMachOThinner.h"
@@ -26,6 +28,8 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		fprintf(stdout, "\n[+] Starting rootless-patcher...\n\n");
 
+		NSError *error = nil;
+
 		NSString *const temporaryDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"rootless-patcher"];
 		NSFileManager *const fileManager = [NSFileManager defaultManager];
 
@@ -36,16 +40,10 @@ int main(int argc, char *argv[], char *envp[]) {
 			return EXIT_FAILURE;
 		}
 
-		const BOOL handleScript = [RPScriptHandler handleScriptForFile:debPath];
-		if (!handleScript) {
-			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
-			return EXIT_FAILURE;
-		}
-
-		NSString *const patchWorkingDirectoryPath = [NSString stringWithFormat:@"patch_%@", [[debPath lastPathComponent] stringByDeletingPathExtension]];
-		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:patchWorkingDirectoryPath];
-		if (![fileManager fileExistsAtPath:patchWorkingDirectory]) {
-			fprintf(stderr, "[-] Patch working directory does not exist at path: %s\n", patchWorkingDirectoryPath.fileSystemRepresentation);
+		NSString *const patchWorkingDirectory = [temporaryDirectory stringByAppendingPathComponent:[[debPath lastPathComponent] stringByDeletingPathExtension]];
+		const BOOL repackSuccess = [RPRepackHandler repackFile:debPath toDirectory:patchWorkingDirectory];
+		if (!repackSuccess) {
+			fprintf(stderr, "[-] Failed to repack .deb.\n");
 			return EXIT_FAILURE;
 		}
 
@@ -60,7 +58,6 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
 		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
 
-		NSError *error = nil;
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
 		if (!conversionRuleset) {
 			fprintf(stderr, "[-] Could not find ConversionRuleset.json at path: %s. Error: %s\n", conversionRulesetPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
@@ -114,9 +111,15 @@ int main(int argc, char *argv[], char *envp[]) {
 				break;
 			}
 
-			const int machOMergeStatus = [RPMachOMerger mergeMachOsAtPaths:thinnedMachOs outputPath:fatMachO];
+			NSMutableDictionary<NSNumber *, NSString *> *const uniqueThinnedMachOs = [NSMutableDictionary dictionary];
+			for (NSString *thinnedMachO in thinnedMachOs) {
+				const struct mach_header_64 *header = (struct mach_header_64 *)[[NSData dataWithContentsOfFile:thinnedMachO] bytes];
+				[uniqueThinnedMachOs setObject:thinnedMachO forKey:@(header->cpusubtype & ~CPU_SUBTYPE_MASK)];
+			}
+
+			const BOOL machOMergeStatus = [RPMachOMerger mergeMachOsAtPaths:[uniqueThinnedMachOs allValues] outputPath:fatMachO];
 			if (machOMergeStatus != 0) {
-				fprintf(stderr, "[-] Failed to merge Mach-O's: %s\n", thinnedMachOs.description.UTF8String);
+				fprintf(stderr, "[-] Failed to merge Mach-O's: %s\n", uniqueThinnedMachOs.description.UTF8String);
 				break;
 			}
 
@@ -251,31 +254,67 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		fprintf(stdout, "[+] Finishing control script file portion...\n");
 
+		NSArray<NSString *> *const controlPathComponents = [controlFile pathComponents];
+		NSString *const debianPath = [patchWorkingDirectory stringByAppendingPathComponent:@"DEBIAN"];
+		NSString *const controlContainer = [[controlPathComponents componentsJoinedByString:@"/"] stringByDeletingLastPathComponent];
+
+		if (![[controlContainer lastPathComponent] isEqualToString:@"DEBIAN"]) {
+			fprintf(stdout, "\n[!] IMPORTANT: Starting a hacky fix for certain tweaks that contain an improper DEBIAN directory structure. This is done in order for dpkg-deb to properly build the .deb.\nThe control container (which should end with DEBIAN), is actually: %s\n\n", controlContainer.fileSystemRepresentation);
+			error = nil;
+
+			for (NSString *controlScriptFile in controlScriptFiles) {
+				error = nil;
+				const BOOL moveSuccess = [fileManager moveItemAtPath:controlScriptFile toPath:[debianPath stringByAppendingPathComponent:[controlScriptFile lastPathComponent]] error:&error];
+				if (!moveSuccess) {
+					fprintf(stderr, "[-] Failed to move control script to path: %s. Error: %s\n", debianPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				}
+			}
+
+			NSString *const improperStructurePath = [[controlContainer stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"improper_control_directory_structure"];
+
+			error = nil;
+			const BOOL renameSuccess = [fileManager moveItemAtPath:controlContainer toPath:improperStructurePath error:&error];
+			if (!renameSuccess) {
+				fprintf(stderr, "[-] Failed to rename control container. Error: %s\n", error.localizedDescription.UTF8String);
+			}
+
+			error = nil;
+			NSString *const newControlFilePath = [improperStructurePath stringByAppendingPathComponent:[controlFile lastPathComponent]];
+			const BOOL moveSuccess = [fileManager moveItemAtPath:newControlFilePath toPath:[debianPath stringByAppendingPathComponent:[controlFile lastPathComponent]] error:&error];
+			if (!moveSuccess) {
+				fprintf(stderr, "[-] Failed to move control file to path: %s. Error: %s\n", debianPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			}
+
+			error = nil;
+			const BOOL improperDirectoryRemoveSuccess = [fileManager removeItemAtPath:improperStructurePath error:&error];
+			if (!improperDirectoryRemoveSuccess) {
+				fprintf(stderr, "[-] Failed to rename improper directory. Error: %s\n", error.localizedDescription.UTF8String);
+			}
+		}
+
+		const BOOL handleScript = [RPScriptHandler handleScriptForFile:patchWorkingDirectory];
+		if (!handleScript) {
+			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
+			return EXIT_FAILURE;
+		}
+
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];
 
-		const int dpkgDebStatus = [RPSpawnHandler spawnWithArguments:@[
+		const int buildStatus = [RPSpawnHandler spawnWithArguments:@[
 			@"dpkg-deb",
 			@"-b",
 			patchWorkingDirectory,
 			newPath
 		]];
 
-		if (dpkgDebStatus != 0) {
-			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb");
+		if (buildStatus != 0) {
+			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb\n");
 		}
 
 		error = nil;
 		const BOOL patchWorkingDirectoryRemoveSuccess = [fileManager removeItemAtPath:patchWorkingDirectory error:&error];
 		if (!patchWorkingDirectoryRemoveSuccess) {
 			fprintf(stderr, "[-] Error removing patch working directory: %s. Error: %s\n", patchWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return EXIT_FAILURE;
-		}
-
-		NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:[debPath lastPathComponent]];
-		error = nil;
-		const BOOL temporaryDirectoryRemoveSuccess = [fileManager removeItemAtPath:temporaryDebPath error:&error];
-		if (!temporaryDirectoryRemoveSuccess) {
-			fprintf(stderr, "[-] Error removing temporary .deb path: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 			return EXIT_FAILURE;
 		}
 

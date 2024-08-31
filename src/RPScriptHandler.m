@@ -6,48 +6,27 @@
 @implementation RPScriptHandler
 
 + (BOOL)handleScriptForFile:(NSString *)file {
-	NSError *error = nil;
-
 	NSFileManager *const fileManager = [NSFileManager defaultManager];
-	NSString *const temporaryDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"rootless-patcher"];
-
-	NSString *const deb = [file lastPathComponent];
-	NSString *const temporaryDebPath = [temporaryDirectory stringByAppendingPathComponent:deb];
-
-	if ([fileManager fileExistsAtPath:temporaryDebPath]) {
-		const BOOL success = [fileManager removeItemAtPath:temporaryDebPath error:&error];
-		if (!success) {
-			fprintf(stderr, "[-] Failed to remove already existing .deb file in temporary directory: %s. Error: %s\n", temporaryDebPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return NO;
-		}
-	}
-
-	error = nil;
-	if (![fileManager fileExistsAtPath:temporaryDirectory]) {
-		const BOOL success = [fileManager createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:&error];
-		if (!success) {
-			fprintf(stderr, "[-] Failed to create temporary directory: %s. Error: %s\n", temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
-			return NO;
-		}
-	}
-
-	error = nil;
-	const BOOL success = [fileManager copyItemAtPath:file toPath:temporaryDebPath error:&error];
-	if (!success) {
-		fprintf(stderr, "[-] Failed to copy .deb %s to temporary directory %s. Error: %s\n", file.fileSystemRepresentation, temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
-		return NO;
-	}
 
 	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
 
 	const int scriptStatus = [RPSpawnHandler spawnWithArguments:@[
 		@"sh",
 		scriptPath,
-		temporaryDebPath
+		file
 	]];
 
 	if (scriptStatus != 0) {
 		fprintf(stderr, "[-] Failed to execute script: %s\n", scriptPath.fileSystemRepresentation);
+		return NO;
+	}
+
+	NSString *const libCachePath = [file stringByAppendingPathComponent:@"._lib_cache"];
+
+	NSError *error = nil;
+	const BOOL success = [fileManager removeItemAtPath:libCachePath error:&error];
+	if (!success) {
+		fprintf(stderr, "[-] Failed to ._lib_cache: %s. Error: %s\n", libCachePath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return NO;
 	}
 

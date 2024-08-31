@@ -67,7 +67,18 @@
 }
 
 - (NSString *)controlFile {
-	return [[_directory stringByAppendingPathComponent:@"DEBIAN"] stringByAppendingPathComponent:@"control"];
+	NSFileManager *const fileManager = [NSFileManager defaultManager];
+	__block NSString *controlFilePath = @"";
+
+	[self _recursivelyScanDirectory:[_directory stringByAppendingPathComponent:@"DEBIAN"] withBlock:^(NSString *filePath) {
+		BOOL isDirectory = NO;
+
+		if ([[filePath lastPathComponent] isEqualToString:@"control"] && [fileManager fileExistsAtPath:filePath isDirectory:&isDirectory] && !isDirectory) {
+			controlFilePath = filePath;
+		}
+	}];
+
+	return controlFilePath;
 }
 
 - (void)_recursivelyScanDirectory:(NSString *)directory withBlock:(void (^)(NSString *))block {

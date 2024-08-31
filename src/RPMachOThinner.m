@@ -53,13 +53,13 @@
 	struct fat_arch *arch = (struct fat_arch *)([data bytes] + sizeof(struct fat_header));
 
 	for (uint32_t i = 0; i < OSSwapBigToHostInt32(header->nfat_arch); i++) {
-		const struct mach_header_64 *mh = (const struct mach_header_64 *)([data bytes] + OSSwapBigToHostInt32(arch->offset));
+		const struct mach_header_64 *header = (const struct mach_header_64 *)([data bytes] + OSSwapBigToHostInt32(arch->offset));
 
-		if (mh->cputype == CPU_TYPE_ARM64) {
+		if (header->cputype == CPU_TYPE_ARM64) {
 			const NSRange sliceRange = NSMakeRange(OSSwapBigToHostInt32(arch->offset), OSSwapBigToHostInt32(arch->size));
 			NSData *const subdata = [data subdataWithRange:sliceRange];
 
-			NSString *const thinnedPath = [RPMachOThinner _thinnedPathForPath:path cpusubtype:mh->cpusubtype];
+			NSString *const thinnedPath = [RPMachOThinner _thinnedPathForPath:path cpusubtype:header->cpusubtype];
 
 			NSError *error = nil;
 			const BOOL success = [subdata writeToFile:thinnedPath options:NSDataWritingAtomic error:&error];
@@ -79,18 +79,7 @@
 
 + (NSString *)_thinnedPathForPath:(NSString *)path cpusubtype:(cpu_subtype_t)cpusubtype {
 	NSString *const name = [path lastPathComponent];
-	NSString *const subtype = [RPMachOThinner _stringFromCpuSubtype:cpusubtype];
-	return [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@", subtype, name]];
-}
-
-+ (NSString *)_stringFromCpuSubtype:(cpu_subtype_t)cpusubtype {
-	if ((cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
-		return @"arm64e";
-	} else if ((cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64_ALL) {
-		return @"arm64";
-	} else {
-		return @"unknown";
-	}
+	return [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%x_%@", cpusubtype, name]];
 }
 
 @end
