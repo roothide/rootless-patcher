@@ -32,13 +32,18 @@
 			NSString *const key = [previousTokens lastObject];
 			NSString *const value = [[currentTokens subarrayWithRange:NSMakeRange(0, currentTokens.count - 1)] componentsJoinedByString:@"\n"];
 
-			if ([value containsString:@", "]) {
-				[dictionary setObject:[value componentsSeparatedByString:@", "] forKey:key];
-			} else {
-				[dictionary setObject:value forKey:key];
-			}
+			const NSUInteger keyLength = [key length];
+			const NSUInteger valueLength = [value length];
 
-			[keys addObject:key];
+			if (keyLength > 0 && valueLength > 0) {
+				if ([value containsString:@", "]) {
+					[dictionary setObject:[value componentsSeparatedByString:@", "] forKey:key];
+				} else {
+					[dictionary setObject:value forKey:key];
+				}
+
+				[keys addObject:key];
+			}
 		}
 
 		parser->_dictionary = dictionary;

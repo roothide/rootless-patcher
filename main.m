@@ -132,6 +132,12 @@ int main(int argc, char *argv[], char *envp[]) {
 
 			fprintf(stdout, "[+] Checking if %s has entitlements... %s\n", fatMachO.fileSystemRepresentation, hasEntitlements ? "YES" : "NO");
 
+			const BOOL handleScript = [RPScriptHandler handleScriptForFile:fatMachO];
+			if (!handleScript) {
+				fprintf(stderr, "[-] Failed to handle script for file: %s\n", fatMachO.fileSystemRepresentation);
+				break;
+			}
+
 			const int addCodesignStatus = hasEntitlements ? [RPCodesignHandler addCodesignToFile:fatMachO entitlementsPath:entitlementsPath] : [RPCodesignHandler addCodesignToFile:fatMachO];
 			if (addCodesignStatus != 0) {
 				fprintf(stderr, "[-] Failed to add code signature to file at path: %s\n", fatMachO.fileSystemRepresentation);
@@ -290,12 +296,6 @@ int main(int argc, char *argv[], char *envp[]) {
 			if (!improperDirectoryRemoveSuccess) {
 				fprintf(stderr, "[-] Failed to rename improper directory. Error: %s\n", error.localizedDescription.UTF8String);
 			}
-		}
-
-		const BOOL handleScript = [RPScriptHandler handleScriptForFile:patchWorkingDirectory];
-		if (!handleScript) {
-			fprintf(stderr, "[-] Failed to handle script for file: %s\n", debPath.fileSystemRepresentation);
-			return EXIT_FAILURE;
 		}
 
 		NSString *const newPath = [[debPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@_%@_iphoneos-arm64.deb", packageID, packageVersion]];

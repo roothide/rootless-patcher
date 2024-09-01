@@ -149,11 +149,25 @@
 
 			struct dyld_info_command *dyldInfoCommand = (struct dyld_info_command *)lc;
 
-			dyldInfoCommand->rebase_off += fixOffset;
+			if (dyldInfoCommand->rebase_size > 0) {
+				dyldInfoCommand->rebase_off += fixOffset;
+			}
 
-			if (dyldInfoCommand->bind_off) dyldInfoCommand->bind_off += fixOffset;
-			if (dyldInfoCommand->lazy_bind_off) dyldInfoCommand->lazy_bind_off += fixOffset;
-			if (dyldInfoCommand->export_off) dyldInfoCommand->export_off += fixOffset;
+			if (dyldInfoCommand->bind_size > 0 && dyldInfoCommand->bind_off) {
+				dyldInfoCommand->bind_off += fixOffset;
+			}
+
+			if (dyldInfoCommand->weak_bind_size > 0 && dyldInfoCommand->weak_bind_off) {
+				dyldInfoCommand->weak_bind_off += fixOffset;
+			}
+
+			if (dyldInfoCommand->lazy_bind_size > 0 && dyldInfoCommand->lazy_bind_off) {
+				dyldInfoCommand->lazy_bind_off += fixOffset;
+			}
+
+			if (dyldInfoCommand->export_size > 0 && dyldInfoCommand->export_off) {
+				dyldInfoCommand->export_off += fixOffset;
+			}
 
 		} else if (cmd == LC_SYMTAB) {
 
