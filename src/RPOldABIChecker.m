@@ -17,8 +17,6 @@
 
 			if ((thinHeader->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E) {
 				return !(thinHeader->cpusubtype & CPU_SUBTYPE_PTRAUTH_ABI);
-			} else {
-				return NO;
 			}
 
 			arch += 1;
