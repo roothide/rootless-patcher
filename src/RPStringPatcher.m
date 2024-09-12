@@ -13,6 +13,7 @@ struct __CFString {
 @implementation RPStringPatcher {
 	NSMutableData *_data;
 	NSDictionary<NSString *, NSNumber *> *_replacementOffsetMap;
+	NSDictionary<NSString *, NSNumber *> *_originalOffsetMap;
 	RPMachOParser *_parser;
 	struct segment_command_64 *_textSegment;
 	struct section_64 *_cfstringTableSection;
@@ -21,12 +22,13 @@ struct __CFString {
 	BOOL _isDylib;
 }
 
-+ (instancetype)patcherWithData:(NSData *)data replacementOffsetMap:(NSDictionary<NSString *, NSNumber *> *)offsetMap {
++ (instancetype)patcherWithData:(NSData *)data replacementOffsetMap:(NSDictionary<NSString *, NSNumber *> *)replacementOffsetMap originalOffsetMap:(NSDictionary<NSString *, NSNumber *> *)originalOffsetMap {
 	RPStringPatcher *const patcher = [RPStringPatcher new];
 
 	if (patcher) {
 		patcher->_data = [data mutableCopy];
-		patcher->_replacementOffsetMap = offsetMap;
+		patcher->_replacementOffsetMap = replacementOffsetMap;
+		patcher->_originalOffsetMap = originalOffsetMap;
 
 		struct mach_header_64 *header = (struct mach_header_64 *)[patcher->_data bytes];
 		patcher->_parser = [RPMachOParser parserWithHeader:header];
@@ -50,7 +52,7 @@ struct __CFString {
 - (void)patchString:(NSString *)originalString toString:(NSString *)patchedString {
 	fprintf(stdout, "\t%s -> %s\n", originalString.UTF8String, patchedString.UTF8String);
 
-	const uint64_t originalAddress = [self _getCStringAddress:originalString];
+	const uint64_t originalAddress = [[_originalOffsetMap valueForKey:originalString] unsignedLongLongValue];
 	const uint64_t replacementAddress = [[_replacementOffsetMap valueForKey:patchedString] unsignedLongLongValue];
 
 	if ((!originalAddress || !replacementAddress) || (replacementAddress == originalAddress)) return;
@@ -81,7 +83,7 @@ struct __CFString {
 }
 
 - (void)_patchCFString:(uint32_t)originalAddress replacementAddress:(uint32_t)replacementAddress newLength:(uint32_t)newLength {
-	void *buffer = [_data mutableBytes];
+	const void *buffer = [_data mutableBytes];
 	const uint32_t tableAddress = _isDylib ? (uint32_t)(_cfstringTableSection->addr) : (uint32_t)(_cfstringTableSection->addr - IMAGE_BASE);
 
 	for (uint32_t i = 0; i < _cfstringTableSection->size; i += sizeof(struct __CFString)) {
@@ -95,7 +97,7 @@ struct __CFString {
 }
 
 - (void)_patchGlobalCString:(uint64_t)originalAddress replacementAddress:(uint64_t)replacementAddress {
-	void *buffer = [_data mutableBytes];
+	const void *buffer = [_data mutableBytes];
 	const uint32_t tableAddress = _isDylib ? (uint32_t)(_globalTableSection->addr) : (uint32_t)(_globalTableSection->addr - IMAGE_BASE);
 
 	for (uint32_t i = 0; i < _globalTableSection->size; i += sizeof(char *)) {
@@ -155,34 +157,6 @@ struct __CFString {
 			}
 		}
     }
-}
-
-- (uint64_t)_getCStringAddress:(NSString *)string {
-	const void *fileBytes = [_data bytes];
-
-	const uint64_t mappedOffset = _textSegment->vmaddr - _textSegment->fileoff;
-
-	const uintptr_t start = (uintptr_t)fileBytes + _cStringTableSection->offset;
-	const char *cstring = NULL;
-
-	for (uint32_t offset = 0; offset < _cStringTableSection->size; offset++) {
-		const char *currentChar = (const char *)(start + offset);
-
-		if (*currentChar == '\0') {
-			if (cstring) {
-				if (strcmp(cstring, string.UTF8String) == 0) {
-					return ((uint64_t)cstring - (uint64_t)fileBytes) + mappedOffset;
-				}
-
-				cstring = NULL;
-			}
-		} else if (cstring == NULL) {
-			cstring = currentChar;
-		}
-	}
-
-	const uint8_t *address = memmem(fileBytes, 0x100000, (const uint8_t *)[string UTF8String], [string length]);
-	return address ? (uint64_t)address - (uint64_t)fileBytes : 0x0;
 }
 
 - (NSData *)data {

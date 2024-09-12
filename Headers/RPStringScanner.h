@@ -5,6 +5,7 @@
 @interface RPStringScanner : NSObject
 + (nullable instancetype)scannerWithFile:(nonnull NSString *)file conversionRuleset:(nonnull NSDictionary *)conversionRuleset;
 - (nonnull NSDictionary<NSString *, NSString *> *)stringMap;
+- (nonnull NSDictionary<NSString *, NSNumber *> *)offsetMap;
 
 + (nullable instancetype)new __attribute__((unavailable("Use +stringScannerForFile: instead")));
 - (nullable instancetype)init __attribute__((unavailable("Use +stringScannerForFile: instead")));

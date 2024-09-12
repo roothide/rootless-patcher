@@ -28,7 +28,7 @@
 	return modifier;
 }
 
-- (void)addSegment:(NSString *)segname withSection:(NSString *)sectname withStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
+- (void)addSegment:(NSString *)segname section:(NSString *)sectname stringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
 	struct mach_header_64 *header = (struct mach_header_64 *)[_parser header];
 
 	struct segment_command_64 *linkeditSegment = [_parser segmentWithName:@"__LINKEDIT"];
@@ -111,8 +111,8 @@
 	}
 }
 
-- (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
-	RPStringPatcher *const patcher = [RPStringPatcher patcherWithData:_fileData replacementOffsetMap:_replacementOffsetMap];
+- (void)rebaseStringsWithStringMap:(NSDictionary<NSString *, NSString *> *)stringMap originalOffsetMap:(NSDictionary<NSString *, NSNumber *> *)originalOffsetMap {
+	RPStringPatcher *const patcher = [RPStringPatcher patcherWithData:_fileData replacementOffsetMap:_replacementOffsetMap originalOffsetMap:originalOffsetMap];
 
 	for (NSString *originalString in stringMap) {
 		NSString *const patchedString = [stringMap objectForKey:originalString];

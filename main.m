@@ -91,10 +91,11 @@ int main(int argc, char *argv[], char *envp[]) {
 
 				RPStringScanner *const stringScanner = [RPStringScanner scannerWithFile:file conversionRuleset:conversionRuleset];
 				NSDictionary<NSString *, NSString *> *const stringMap = [stringScanner stringMap];
+				NSDictionary<NSString *, NSNumber *> *const offsetMap = [stringScanner offsetMap];
 
 				RPMachOModifier *const modifier = [RPMachOModifier modifierWithFile:file];
-				[modifier addSegment:@"__PATCH_ROOTLESS" withSection:@"__cstring" withStringMap:stringMap];
-				[modifier rebaseStringsWithStringMap:stringMap];
+				[modifier addSegment:@"__PATCH_ROOTLESS" section:@"__cstring" stringMap:stringMap];
+				[modifier rebaseStringsWithStringMap:stringMap originalOffsetMap:offsetMap];
 
 				NSData *const data = [modifier data];
 				[data writeToFile:file options:NSDataWritingAtomic error:nil];

@@ -2,7 +2,7 @@
 #import <Foundation/NSString.h>
 
 @interface RPStringPatcher : NSObject
-+ (nullable instancetype)patcherWithData:(nonnull NSData *)data replacementOffsetMap:(nonnull NSDictionary<NSString *, NSNumber *> *)offsetMap;
++ (nullable instancetype)patcherWithData:(nonnull NSData *)data replacementOffsetMap:(nonnull NSDictionary<NSString *, NSNumber *> *)offsetMap originalOffsetMap:(nonnull NSDictionary<NSString *, NSNumber *> *)originalOffsetMap;
 - (void)patchString:(nonnull NSString *)string toString:(nonnull NSString *)string ;
 - (nonnull NSData *)data;
 
