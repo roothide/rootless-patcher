@@ -7,13 +7,17 @@ else ifeq ($(TARGET_OS), ios)
 TARGET := iphone:clang:latest:15.0
 ARCHS = arm64
 
+else
+
+$(error TARGET_OS is not defined. Please specify either "ios" or "macos")
+
 endif
 
 include $(THEOS)/makefiles/common.mk
 
 TOOL_NAME = rootless-patcher
 
-rootless-patcher_FILES = main.m src/assembler.c $(shell find ./src -type f -name '*.m')
+rootless-patcher_FILES = $(wildcard *.m */*.m */*.c)
 rootless-patcher_CFLAGS = -fobjc-arc
 
 ifeq ($(TARGET_OS), ios)
