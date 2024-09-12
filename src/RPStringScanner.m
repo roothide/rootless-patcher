@@ -6,6 +6,7 @@
 @implementation RPStringScanner {
 	NSData *_fileData;
 	RPConversionHandler *_conversionHandler;
+	RPMachOParser *_parser;
 }
 
 + (instancetype)scannerWithFile:(NSString *)file conversionRuleset:(NSDictionary *)conversionRuleset {
@@ -14,6 +15,9 @@
 	if (scanner) {
 		scanner->_fileData = [NSData dataWithContentsOfFile:file];
 		scanner->_conversionHandler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
+
+		struct mach_header_64 *header = (struct mach_header_64 *)[scanner->_fileData bytes];
+		scanner->_parser = [RPMachOParser parserWithHeader:header];
 	}
 
 	return scanner;
@@ -47,18 +51,17 @@
 - (NSArray<NSString *> *)_textStrings {
 	NSMutableArray *const originalStrings = [NSMutableArray array];
 
-	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
-	RPMachOParser *const parser = [RPMachOParser parserWithHeader:header];
-
-	struct segment_command_64 *textSegment = [parser segmentWithName:@"__TEXT"];
+	struct segment_command_64 *textSegment = [_parser segmentWithName:@"__TEXT"];
 	if (!textSegment) {
 		return nil;
 	}
 
-	struct section_64 *cStringSection = [parser sectionInSegment:textSegment withName:@"__cstring"];
+	struct section_64 *cStringSection = [_parser sectionInSegment:textSegment withName:@"__cstring"];
 	if (!cStringSection) {
 		return nil;
 	}
+
+	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
 
 	const uintptr_t start = (uintptr_t)header + cStringSection->offset;
 	const char *string = NULL;
@@ -87,18 +90,17 @@
 - (NSArray<NSString *> *)_dataStrings {
 	NSMutableArray *const originalStrings = [NSMutableArray array];
 
-	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
-	RPMachOParser *const parser = [RPMachOParser parserWithHeader:header];
-
-	struct segment_command_64 *dataSegment = [parser segmentWithName:@"__DATA"];
+	struct segment_command_64 *dataSegment = [_parser segmentWithName:@"__DATA"];
 	if (!dataSegment) {
 		return nil;
 	}
 
-	struct section_64 *dataSection = [parser sectionInSegment:dataSegment withName:@"__data"];
+	struct section_64 *dataSection = [_parser sectionInSegment:dataSegment withName:@"__data"];
 	if (!dataSection) {
 		return nil;
 	}
+
+	struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
 
 	const uintptr_t start = (uintptr_t)header + dataSection->offset;
 	const char *string = NULL;

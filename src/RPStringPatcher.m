@@ -114,8 +114,11 @@ struct __CFString {
 
 	const uint64_t end = (uint64_t)[_data length] & ~3;
 
-    for (uint64_t i = 0; i < end; i += 4) {
+    for (uint64_t i = 0; i < end; i += 0x4) {
+		const uint32_t previousInstruction = *(uint32_t *)(buffer + i - 0x4);
         const uint32_t currentInstruction = *(uint32_t *)(buffer + i);
+
+		const uint32_t previousRegister = previousInstruction & 0x1F;
         const uint32_t currentRegister = currentInstruction & 0x1F;
 
         if ((currentInstruction & ADRP_MASK) == ADRP_OPCODE) {
@@ -134,8 +137,8 @@ struct __CFString {
 
             if (registers[currentRegister] == originalAddress) {
 				const uint32_t adrpImmediateNew = (uint32_t)(((replacementAddress & ~PAGE_OFFSET_MASK) / ARM_PAGE_SIZE) - ((i & ~PAGE_OFFSET_MASK) / ARM_PAGE_SIZE));
+				const uint32_t adrpInstructionNew = generate_adrp(previousRegister, adrpImmediateNew);
 				const uint32_t addImmediateNew = (uint32_t)(replacementAddress & PAGE_OFFSET_MASK);
-				const uint32_t adrpInstructionNew = generate_adrp(currentRegister, adrpImmediateNew);
 				const uint32_t addInstructionNew = generate_add(currentRegister, addRegister, addImmediateNew, 0);
 
                 *(uint32_t *)(buffer + i - 0x4) = OSSwapHostToLittleInt32(adrpInstructionNew);

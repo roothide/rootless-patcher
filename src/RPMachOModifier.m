@@ -63,7 +63,7 @@
 		.align = 0,
 		.reloff = 0,
 		.nreloc = 0,
-		.flags = S_REGULAR,
+		.flags = S_CSTRING_LITERALS,
 		.reserved1 = 0,
 		.reserved2 = 0,
 		.reserved3 = 0
@@ -74,7 +74,8 @@
 
 	const uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
 
-	unsigned char *cmds = (unsigned char *)malloc(header->sizeofcmds);
+	unsigned char cmds[header->sizeofcmds];
+
 	memcpy(cmds, (unsigned char *)header + sizeof(struct mach_header_64), header->sizeofcmds);
 
 	unsigned char *patch = (unsigned char *)header + sizeof(struct mach_header_64) + linkeditSegmentOffset;
@@ -94,8 +95,6 @@
 
 	linkeditSegment->fileoff = _fileData.length + newSegment.filesize;
 	linkeditSegment->vmaddr = vmEnd + newSegment.vmsize;
-
-	free((void *)cmds);
 
 	struct linkedit_data_command *chainedFixups = nil;
 	[self _shiftCommandsWithNewSegment:newSegment chainedFixups:&chainedFixups];

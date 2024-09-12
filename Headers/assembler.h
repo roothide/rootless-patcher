@@ -8,12 +8,13 @@
 
 #define IMAGE_BASE	0x100000000
 
+#define ADRP_OPCODE	0b10010000000000000000000000000000
+#define ADD_OPCODE	0b10010001000000000000000000000000
+#define ADR_OPCODE	0b00010000000000000000000000000000
+
 #define ADRP_MASK	0x9F000000
-#define ADRP_OPCODE	0x90000000
 #define ADD_MASK	0xFF000000
-#define ADD_OPCODE	0x91000000
 #define ADR_MASK	0x9F000000
-#define ADR_OPCODE	0x10000000
 
 #define get_adrp_value(instruction, i)	(((int64_t)(((instruction & 0x60000000) >> 18) | ((instruction & 0xffffe0) << 8)) << 1) + (i & ~PAGE_OFFSET_MASK))
 #define get_adr_value(instruction, i)	(((int64_t)(((instruction & 0x60000000) >> 18) | ((instruction & 0xffffe0) << 8)) >> 11) + i)

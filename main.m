@@ -294,7 +294,7 @@ int main(int argc, char *argv[], char *envp[]) {
 			error = nil;
 			const BOOL improperDirectoryRemoveSuccess = [fileManager removeItemAtPath:improperStructurePath error:&error];
 			if (!improperDirectoryRemoveSuccess) {
-				fprintf(stderr, "[-] Failed to rename improper directory. Error: %s\n", error.localizedDescription.UTF8String);
+				fprintf(stderr, "[-] Failed to remove improper directory. Error: %s\n", error.localizedDescription.UTF8String);
 			}
 		}
 
