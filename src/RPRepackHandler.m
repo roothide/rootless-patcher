@@ -36,7 +36,9 @@
 	NSString *const newJBRoot = [directory stringByAppendingPathComponent:@"/var/jb"];
 
 	error = nil;
-	const BOOL jbrootCreateSuccess = [fileManager createDirectoryAtPath:newJBRoot withIntermediateDirectories:YES attributes:nil error:&error];
+	const BOOL jbrootCreateSuccess = [fileManager createDirectoryAtPath:newJBRoot withIntermediateDirectories:YES attributes:@{
+		NSFilePosixPermissions: @(0777)
+	} error:&error];
 	if (!jbrootCreateSuccess) {
 		fprintf(stderr, "[-] Failed to create /var/jb directory at path: %s. Error: %s\n", directory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return NO;
@@ -46,7 +48,7 @@
 	NSArray *const contents = [fileManager contentsOfDirectoryAtPath:oldWorkingDirectory error:&error];
 
 	if (!contents) {
-		fprintf(stderr, "[-] Failed to get contents of directory: %s. Error: %s\n", directory.fileSystemRepresentation, error.localizedDescription.UTF8String);
+		fprintf(stderr, "[-] Failed to get contents of directory: %s. Error: %s\n", oldWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
 		return NO;
 	}
 

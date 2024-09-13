@@ -33,8 +33,17 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const temporaryDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"rootless-patcher"];
 		NSFileManager *const fileManager = [NSFileManager defaultManager];
 
-		NSString *const debPath = [NSString stringWithUTF8String:argv[1]];
 		BOOL isDirectory;
+		if (![fileManager fileExistsAtPath:temporaryDirectory isDirectory:&isDirectory] || !isDirectory) {
+			const BOOL tempDirectoryCreateSuccess = [fileManager createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:&error];
+			if (!tempDirectoryCreateSuccess) {
+				fprintf(stderr, "[-] Failed to temporary directory at %s. Error: %s\n", temporaryDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				return EXIT_FAILURE;
+			}
+		}
+
+		isDirectory = NO;
+		NSString *const debPath = [NSString stringWithUTF8String:argv[1]];
 		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) {
 			fprintf(stderr, "[-] Cannot find file at path: %s\n", debPath.fileSystemRepresentation);
 			return EXIT_FAILURE;
@@ -58,6 +67,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
 		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
 
+		error = nil;
 		NSDictionary *const conversionRuleset = [NSJSONSerialization JSONObjectWithData:conversionRulesetData options:kNilOptions error:&error];
 		if (!conversionRuleset) {
 			fprintf(stderr, "[-] Could not find ConversionRuleset.json at path: %s. Error: %s\n", conversionRulesetPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
@@ -308,14 +318,15 @@ int main(int argc, char *argv[], char *envp[]) {
 			newPath
 		]];
 
-		if (buildStatus != 0) {
-			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb\n");
-		}
-
 		error = nil;
 		const BOOL patchWorkingDirectoryRemoveSuccess = [fileManager removeItemAtPath:patchWorkingDirectory error:&error];
 		if (!patchWorkingDirectoryRemoveSuccess) {
 			fprintf(stderr, "[-] Error removing patch working directory: %s. Error: %s\n", patchWorkingDirectory.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			return EXIT_FAILURE;
+		}
+
+		if (buildStatus != 0) {
+			fprintf(stderr, "[-] Failed to build .deb using dpkg-deb\n");
 			return EXIT_FAILURE;
 		}
 
