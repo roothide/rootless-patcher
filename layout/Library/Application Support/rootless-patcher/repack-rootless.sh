@@ -2,8 +2,8 @@
 
 set -e
 
-FILE=${1}
-WORKING_DIR="$(dirname ${FILE})"
+FILE="${1}"
+WORKING_DIR="$(dirname "${FILE}")"
 
 echo "[+] Script handling file: ${FILE}"
 
@@ -37,14 +37,19 @@ echo "${LOAD_COMMANDS}" | grep "/Library/PreferenceBundles" | grep -E '/[^/]*/[^
     install_name_tool -change "${BUNDLE_PATH}" "@rpath/${BUNDLE_NAME}.bundle/${BUNDLE_NAME}" "${FILE}" > /dev/null 2>&1
 done
 
+echo "${LOAD_COMMANDS}" | grep "/Library/MobileSubstrate/DynamicLibraries" | grep -E '/[^/]*' | cut -d' ' -f1  | cut -d':' -f1 | while read -r DYLIB_PATH; do
+    DYLIB_NAME=$(basename "${DYLIB_PATH}")
+    install_name_tool -change "${DYLIB_PATH}" "@rpath/${DYLIB_NAME}" "${FILE}" > /dev/null 2>&1
+done
+
 echo "${LOAD_COMMANDS}" | grep "/Library/Frameworks" | grep -E '/[^/]*/[^/]*\.framework' | grep -v "/System/Library/Frameworks" | cut -d' ' -f1  | cut -d':' -f1 | while read -r FRAMEWORK_PATH; do
     FRAMEWORK_NAME=$(basename "${FRAMEWORK_PATH}")
     install_name_tool -change "${FRAMEWORK_PATH}" "@rpath/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}" "${FILE}" > /dev/null 2>&1
 done
 
 if [ -f "${WORKING_DIR}"/._lib_cache ]; then
-    cat "${WORKING_DIR}"/._lib_cache | while read line; do
-        install_name_tool -change "${line}" @rpath/"$(basename "${line}")" "${FILE}" > /dev/null 2>&1
+    cat "${WORKING_DIR}"/._lib_cache | while read LINE; do
+        install_name_tool -change "${LINE}" @rpath/"$(basename "${LINE}")" "${FILE}" > /dev/null 2>&1
     done
 fi
 
@@ -54,6 +59,7 @@ install_name_tool -add_rpath "/var/jb/usr/lib" "${FILE}" > /dev/null 2>&1
 install_name_tool -add_rpath "/var/jb/usr/local/lib" "${FILE}" > /dev/null 2>&1
 install_name_tool -add_rpath "/var/jb/Library/Frameworks" "${FILE}" > /dev/null 2>&1
 install_name_tool -add_rpath "/var/jb/Library/PreferenceBundles" "${FILE}" > /dev/null 2>&1
+install_name_tool -add_rpath "/var/jb/Library/MobileSubstrate/DynamicLibraries" "${FILE}" > /dev/null 2>&1
 
 rm -rf "${WORKING_DIR}/._lib_cache"
 

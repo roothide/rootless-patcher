@@ -53,6 +53,7 @@
 	],
 	"SpecialCases": {
 		"private/var/": "var/",
+		"var/tmp": "tmp",
 		"~": "~"
 	}
 }

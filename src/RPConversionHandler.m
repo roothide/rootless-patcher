@@ -13,7 +13,7 @@
 	if (handler) {
 		handler->_blacklist = [conversionRuleset objectForKey:@"Blacklist"];
 		handler->_specialCases = [conversionRuleset objectForKey:@"SpecialCases"];
-		handler->_bootstrapList = @[@"Applications", @"bin", @"boot", @"dev", @"etc", @"lib", @"Library", @"mnt", @"sbin", @"tmp", @"User", @"usr", @"var"];
+		handler->_bootstrapList = @[@"Applications", @"bin", @"boot", @"etc", @"lib", @"Library", @"mnt", @"sbin", @"tmp", @"User", @"usr", @"var"];
 	}
 
 	return handler;
