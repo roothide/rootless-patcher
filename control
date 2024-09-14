@@ -8,4 +8,4 @@ Maintainer: Nightwind
 Author: Nightwind and staturnz
 Section: System
 Tag: role::hacker
-Depends: file, odcctools, fakeroot, ldid
+Depends: odcctools, ldid
