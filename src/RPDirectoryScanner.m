@@ -49,7 +49,7 @@
 	__weak typeof(self) weakSelf = self;
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
 
-	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv", @"extrainst"];
+	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv", @"extrainst", @"triggers"];
 
 	[self _recursivelyScanDirectory:[_directory stringByAppendingPathComponent:@"DEBIAN"] withBlock:^(NSString *filePath) {
 		if ([controlScriptNames containsObject:[filePath lastPathComponent]]) {

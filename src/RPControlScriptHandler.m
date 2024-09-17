@@ -24,7 +24,7 @@
 - (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, NSString *> *)conversionRuleset {
 	RPConversionHandler *const handler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
 
-	NSArray *const separatedComponents = [_fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \n\""]];
+	NSArray *const separatedComponents = [_fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \n\"={}"]];
 	NSMutableDictionary *const convertedStrings = [NSMutableDictionary dictionary];
 
 	const NSUInteger separatedComponentsCount = [separatedComponents count];
@@ -53,7 +53,11 @@
 	}
 
 	for (NSString *originalString in convertedStrings) {
-		_fileContents = [_fileContents stringByReplacingOccurrencesOfString:originalString withString:[convertedStrings valueForKey:originalString]];
+		NSString *const convertedString = [convertedStrings valueForKey:originalString];
+
+		if (![_fileContents containsString:convertedString]) {
+			_fileContents = [_fileContents stringByReplacingOccurrencesOfString:originalString withString:[convertedStrings valueForKey:originalString]];
+		}
 	}
 }
 
