@@ -74,7 +74,7 @@
 
 	const uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
 
-	unsigned char cmds[header->sizeofcmds];
+	unsigned char *cmds = (unsigned char *)malloc(header->sizeofcmds);
 
 	memcpy(cmds, (unsigned char *)header + sizeof(struct mach_header_64), header->sizeofcmds);
 
@@ -87,6 +87,8 @@
 	patch += sizeof(newSection);
 
 	memcpy(patch, cmds + linkeditSegmentOffset, header->sizeofcmds - linkeditSegmentOffset);
+
+	free((void *)cmds);
 
 	linkeditSegment = (struct segment_command_64 *)patch;
 

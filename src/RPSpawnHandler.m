@@ -27,14 +27,13 @@
 
     const NSUInteger arraySize = [arguments count];
 
-	const char **const argumentsC = malloc(arraySize * sizeof(char *) + 1);
+	const char *argumentsC[arraySize + 1];
     for (NSUInteger i = 0; i < arraySize; i++) {
         argumentsC[i] = [arguments[i] UTF8String];
     }
     argumentsC[arraySize] = NULL;
 
     int status = posix_spawnp(&pid, argumentsC[0], &actions, NULL, (char *const *)argumentsC, environ);
-    free((void *)argumentsC);
 
     waitpid(pid, NULL, 0);
 
