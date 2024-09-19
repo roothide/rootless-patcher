@@ -116,12 +116,12 @@ struct __CFString {
 
 	const uint64_t end = (uint64_t)[_data length] & ~3;
 
-    for (uint64_t i = 0; i < end; i += 0x4) {
-		const uint32_t previousInstruction = *(uint32_t *)(buffer + i - 0x4);
+    for (uint64_t i = 0; i < end; i += INSTRUCTION_SIZE) {
+		const uint32_t previousInstruction = *(uint32_t *)(buffer + i - INSTRUCTION_SIZE);
         const uint32_t currentInstruction = *(uint32_t *)(buffer + i);
 
-		const uint32_t previousRegister = previousInstruction & 0x1F;
-        const uint32_t currentRegister = currentInstruction & 0x1F;
+		const uint32_t previousRegister = previousInstruction & REGISTER_MASK;
+        const uint32_t currentRegister = currentInstruction & REGISTER_MASK;
 
         if ((currentInstruction & ADRP_MASK) == ADRP_OPCODE) {
 			registers[currentRegister] = get_adrp_value(currentInstruction, i);
@@ -143,17 +143,35 @@ struct __CFString {
 				const uint32_t addImmediateNew = (uint32_t)(replacementAddress & PAGE_OFFSET_MASK);
 				const uint32_t addInstructionNew = generate_add(currentRegister, addRegister, addImmediateNew, 0);
 
-                *(uint32_t *)(buffer + i - 0x4) = OSSwapHostToLittleInt32(adrpInstructionNew);
+                *(uint32_t *)(buffer + i - INSTRUCTION_SIZE) = OSSwapHostToLittleInt32(adrpInstructionNew);
                 *(uint32_t *)(buffer + i) = OSSwapHostToLittleInt32(addInstructionNew);
             }
 		} else if ((currentInstruction & ADR_MASK) == ADR_OPCODE) {
 			registers[currentRegister] = get_adr_value(currentInstruction, i);
 
 			if (registers[currentRegister] == originalAddress) {
-				const uint32_t adrImmediateNew = (uint32_t)(replacementAddress - i);
-				const uint32_t adrInstructionNew = generate_adr(currentRegister, adrImmediateNew);
+				const int64_t offset = (int64_t)replacementAddress - (int64_t)i;
 
-				*(uint32_t *)(buffer + i) = OSSwapHostToLittleInt32(adrInstructionNew);
+				if (offset >= -ADR_MAX_RANGE && offset <= ADR_MAX_RANGE) {
+					const uint32_t adrInstructionNew = generate_adr(currentRegister, (int)offset);
+					*(uint32_t *)(buffer + i) = OSSwapHostToLittleInt32(adrInstructionNew);
+				} else {
+					const uint32_t adrpImmediate = (uint32_t)(((replacementAddress & ~PAGE_OFFSET_MASK) - (i & ~PAGE_OFFSET_MASK)) >> 12);
+					const uint32_t addImmediate = replacementAddress & PAGE_OFFSET_MASK;
+
+					const uint32_t adrpInstruction = generate_adrp(currentRegister, adrpImmediate);
+					const uint32_t addInstruction = generate_add(currentRegister, currentRegister, addImmediate, 0);
+
+					*(uint32_t *)(buffer + i) = OSSwapHostToLittleInt32(adrpInstruction);
+
+					const uint32_t nextInstruction = *(uint32_t *)(buffer + i + INSTRUCTION_SIZE);
+
+					if (i + INSTRUCTION_SIZE < end && nextInstruction == NOP_OPCODE) {
+						*(uint32_t *)(buffer + i + INSTRUCTION_SIZE) = OSSwapHostToLittleInt32(addInstruction);
+					} else {
+						fprintf(stderr, "[!] FAILED TO PATCH - Not enough space to write ADD instruction at address 0x%llx\n", i);
+					}
+				}
 			}
 		}
     }

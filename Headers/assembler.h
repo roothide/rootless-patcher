@@ -3,11 +3,17 @@
 
 #import <stdint.h>
 
+#define INSTRUCTION_SIZE	0x4
+
+#define ADR_MAX_RANGE		(1024 * 1024)
+
+#define REGISTER_MASK		0x1F
 #define PAGE_OFFSET_MASK	0xFFF
 #define ARM_PAGE_SIZE		0x1000
 
 #define IMAGE_BASE	0x100000000
 
+#define NOP_OPCODE	0b11010101000000110010000000011111
 #define ADRP_OPCODE	0b10010000000000000000000000000000
 #define ADD_OPCODE	0b10010001000000000000000000000000
 #define ADR_OPCODE	0b00010000000000000000000000000000
@@ -18,7 +24,7 @@
 
 #define get_adrp_value(instruction, i)	(((int64_t)(((instruction & 0x60000000) >> 18) | ((instruction & 0xffffe0) << 8)) << 1) + (i & ~PAGE_OFFSET_MASK))
 #define get_adr_value(instruction, i)	(((int64_t)(((instruction & 0x60000000) >> 18) | ((instruction & 0xffffe0) << 8)) >> 11) + i)
-#define get_add_register(instruction)	((instruction >> 5) & 0x1f)
+#define get_add_register(instruction)	((instruction >> 5) & REGISTER_MASK)
 #define get_add_value(instruction)		((instruction >> 10) & PAGE_OFFSET_MASK)
 #define get_add_shift(instruction)		((instruction >> 22) & 3)
 

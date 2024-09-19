@@ -101,7 +101,7 @@
 	struct linkedit_data_command *chainedFixups = nil;
 	[self _shiftCommandsWithNewSegment:newSegment chainedFixups:&chainedFixups];
 
-	unsigned char *codepage = (unsigned char *)malloc(newSegment.vmsize);
+	unsigned char *codepage = (unsigned char *)calloc(newSegment.vmsize, 1);
 	[self _addPatchedStringsFromStringMap:stringMap toCodepage:codepage mappedOffset:newSegment.vmaddr - newSegment.fileoff sectionOffset:newSection.offset];
 	[_fileData appendBytes:codepage length:newSegment.vmsize];
 	free((void *)codepage);
