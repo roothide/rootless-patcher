@@ -31,6 +31,7 @@
 - (void)addSegment:(NSString *)segname section:(NSString *)sectname stringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
 	struct mach_header_64 *header = (struct mach_header_64 *)[_parser header];
 
+	struct segment_command_64 *llvmSegment = [_parser segmentWithName:@"__LLVM"];
 	struct segment_command_64 *linkeditSegment = [_parser segmentWithName:@"__LINKEDIT"];
 	if (!linkeditSegment) {
 		return;
@@ -41,6 +42,23 @@
 	const NSRange linkeditRange = NSMakeRange(linkeditSegment->fileoff, linkeditSegment->filesize);
 	NSData *const linkeditData = [_fileData subdataWithRange:linkeditRange];
 	[_fileData replaceBytesInRange:linkeditRange withBytes:nil length:0];
+
+	if (llvmSegment) {
+		strncpy((char *)llvmSegment->segname, "__BITCODE_UNUSED", 16);
+
+        struct section_64 *sect = (struct section_64 *)(llvmSegment + 1);
+        for (uint32_t i = 0; i < llvmSegment->nsects; i++) {
+			sect->size = 0;
+			strncpy((char *)sect->segname, llvmSegment->segname, 16);
+            sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
+        }
+
+		llvmSegment->vmsize = 0;
+		llvmSegment->filesize = 0;
+
+		llvmSegment->initprot = VM_PROT_READ;
+		llvmSegment->maxprot = VM_PROT_READ;
+	}
 
 	const struct segment_command_64 newSegment = {
 		.cmd = LC_SEGMENT_64,
@@ -220,13 +238,13 @@
 	const struct dyld_chained_fixups_header *chainsHeader = (const struct dyld_chained_fixups_header *)(linkeditStartAddress + offsetInLinkedit);
 	const struct dyld_chained_starts_in_image *startsInfo = (const struct dyld_chained_starts_in_image *)((uint8_t *)chainsHeader + chainsHeader->starts_offset);
 
-	const int startsInfoSizeNew = sizeof(struct dyld_chained_starts_in_image) + sizeof(startsInfo->seg_info_offset) * (startsInfo->seg_count + 1);
+	const uint64_t startsInfoSizeNew = sizeof(struct dyld_chained_starts_in_image) + sizeof(startsInfo->seg_info_offset) * (startsInfo->seg_count + 1);
 
 	NSMutableData *const append = [NSMutableData dataWithLength:startsInfoSizeNew];
 	struct dyld_chained_starts_in_image *startsInfoNew = (struct dyld_chained_starts_in_image *)[append mutableBytes];
 	bzero(startsInfoNew, startsInfoSizeNew);
 	*startsInfoNew = *startsInfo;
-	startsInfoNew->seg_count += 2;
+	startsInfoNew->seg_count += 1;
 
 	for (uint32_t i = 0; i < startsInfo->seg_count; i++) {
 		const uint32_t segmentInfoOffset = startsInfo->seg_info_offset[i];
