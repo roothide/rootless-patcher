@@ -39,33 +39,16 @@
 
 	const uint64_t vmEnd = [_parser vmEnd];
 
-	const NSRange linkeditRange = NSMakeRange(linkeditSegment->fileoff, linkeditSegment->filesize);
-	NSData *const linkeditData = [_fileData subdataWithRange:linkeditRange];
-	[_fileData replaceBytesInRange:linkeditRange withBytes:nil length:0];
-
-	if (llvmSegment) {
-		strncpy((char *)llvmSegment->segname, "__BITCODE_UNUSED", 16);
-
-        struct section_64 *sect = (struct section_64 *)(llvmSegment + 1);
-        for (uint32_t i = 0; i < llvmSegment->nsects; i++) {
-			sect->size = 0;
-			strncpy((char *)sect->segname, llvmSegment->segname, 16);
-            sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
-        }
-
-		llvmSegment->vmsize = 0;
-		llvmSegment->filesize = 0;
-
-		llvmSegment->initprot = VM_PROT_READ;
-		llvmSegment->maxprot = VM_PROT_READ;
-	}
+	const NSRange endRange = llvmSegment ? NSMakeRange(llvmSegment->fileoff, llvmSegment->filesize + linkeditSegment->filesize) : NSMakeRange(linkeditSegment->fileoff, linkeditSegment->filesize);
+	NSData *const endData = [_fileData subdataWithRange:endRange];
+	[_fileData replaceBytesInRange:endRange withBytes:nil length:0];
 
 	const struct segment_command_64 newSegment = {
 		.cmd = LC_SEGMENT_64,
 		.cmdsize = sizeof(struct segment_command_64) + sizeof(struct section_64),
-		.vmaddr = vmEnd,
+		.vmaddr = llvmSegment ? llvmSegment->vmaddr : vmEnd,
 		.vmsize = PAGE_SIZE,
-		.fileoff = _fileData.length,
+		.fileoff = llvmSegment ? llvmSegment->fileoff : _fileData.length,
 		.filesize = PAGE_SIZE,
 		.maxprot = VM_PROT_READ,
 		.initprot = VM_PROT_READ,
@@ -90,13 +73,13 @@
 	strncpy((char *)newSection.segname, segname.UTF8String, sizeof(newSection.segname));
 	strncpy((char *)newSection.sectname, sectname.UTF8String, sizeof(newSection.sectname));
 
-	const uint64_t linkeditSegmentOffset = (uint64_t)linkeditSegment - ((uint64_t)header + sizeof(struct mach_header_64));
+	const uint64_t insertOffset = (uint64_t)(llvmSegment ?: linkeditSegment) - (uint64_t)(header + 1);
 
 	unsigned char *cmds = (unsigned char *)malloc(header->sizeofcmds);
 
 	memcpy(cmds, (unsigned char *)header + sizeof(struct mach_header_64), header->sizeofcmds);
 
-	unsigned char *patch = (unsigned char *)header + sizeof(struct mach_header_64) + linkeditSegmentOffset;
+	unsigned char *patch = (unsigned char *)(header + 1) + insertOffset;
 
 	memcpy(patch, &newSegment, sizeof(newSegment));
 	patch += sizeof(newSegment);
@@ -104,17 +87,35 @@
 	memcpy(patch, &newSection, sizeof(newSection));
 	patch += sizeof(newSection);
 
-	memcpy(patch, cmds + linkeditSegmentOffset, header->sizeofcmds - linkeditSegmentOffset);
+	memcpy(patch, cmds + insertOffset, header->sizeofcmds - insertOffset);
 
 	free((void *)cmds);
 
-	linkeditSegment = (struct segment_command_64 *)patch;
+	_parser = [RPMachOParser parserWithHeader:header];
+
+	llvmSegment = [_parser segmentWithName:@"__LLVM"];
+	linkeditSegment = [_parser segmentWithName:@"__LINKEDIT"];
 
 	header->ncmds += 1;
 	header->sizeofcmds += newSegment.cmdsize;
 
-	linkeditSegment->fileoff = _fileData.length + newSegment.filesize;
-	linkeditSegment->vmaddr = vmEnd + newSegment.vmsize;
+	if (llvmSegment) {
+        struct section_64 *sect = (struct section_64 *)(llvmSegment + 1);
+        for (uint32_t i = 0; i < llvmSegment->nsects; i++) {
+			sect->offset = sect->offset - llvmSegment->fileoff + newSegment.fileoff + newSegment.filesize;
+			sect->addr = sect->addr - llvmSegment->vmaddr + newSegment.vmaddr + newSegment.vmsize;
+            sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
+        }
+
+		llvmSegment->fileoff = newSegment.fileoff + newSegment.filesize;
+		llvmSegment->vmaddr = newSegment.vmaddr + newSegment.vmsize;
+
+		linkeditSegment->fileoff = llvmSegment->filesize + newSegment.fileoff + newSegment.filesize;
+		linkeditSegment->vmaddr = llvmSegment->vmsize + newSegment.vmaddr + newSegment.vmsize;
+	} else {
+		linkeditSegment->fileoff = newSegment.fileoff + newSegment.filesize;
+		linkeditSegment->vmaddr = newSegment.vmaddr + newSegment.vmsize;
+	}
 
 	struct linkedit_data_command *chainedFixups = nil;
 	[self _shiftCommandsWithNewSegment:newSegment chainedFixups:&chainedFixups];
@@ -124,7 +125,7 @@
 	[_fileData appendBytes:codepage length:newSegment.vmsize];
 	free((void *)codepage);
 
-	[_fileData appendData:linkeditData];
+	[_fileData appendData:endData];
 
 	if (chainedFixups) {
 		[self _fixChainedFixups:chainedFixups linkeditSegment:linkeditSegment];
