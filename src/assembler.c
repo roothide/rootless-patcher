@@ -28,3 +28,10 @@ uint32_t generate_add(int destination_register, int source_register, int immedia
     instruction |= source_register << 5;
     return instruction;
 }
+
+uint32_t generate_mov(int destination_register, int immediate) {
+    uint32_t instruction = MOV_OPCODE;
+    instruction |= (immediate & 0xFFFF) << 5;
+    instruction |= destination_register;
+    return instruction;
+}

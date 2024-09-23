@@ -57,6 +57,7 @@ struct __CFString {
 
 	if ((!originalAddress || !replacementAddress) || (replacementAddress == originalAddress)) return;
 
+	const size_t oldLength = [originalString length];
 	const size_t newLength = [patchedString length];
 
 	if (_isDylib) {
@@ -64,7 +65,7 @@ struct __CFString {
 			[self _patchCFString:originalAddress replacementAddress:replacementAddress newLength:newLength];
 		}
 
-		[self _patchCString:originalAddress replacementAddress:replacementAddress];
+		[self _patchCString:originalAddress replacementAddress:replacementAddress oldLength:oldLength newLength:newLength];
 
 		if (_globalTableSection) {
 			[self _patchGlobalCString:originalAddress replacementAddress:replacementAddress];
@@ -74,7 +75,7 @@ struct __CFString {
 			[self _patchCFString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress - IMAGE_BASE newLength:newLength];
 		}
 
-		[self _patchCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress - IMAGE_BASE];
+		[self _patchCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress - IMAGE_BASE oldLength:oldLength newLength:newLength];
 
 		if (_globalTableSection) {
 			[self _patchGlobalCString:originalAddress - IMAGE_BASE replacementAddress:replacementAddress];
@@ -82,7 +83,7 @@ struct __CFString {
 	}
 }
 
-- (void)_patchCFString:(uint32_t)originalAddress replacementAddress:(uint32_t)replacementAddress newLength:(uint32_t)newLength {
+- (void)_patchCFString:(uint32_t)originalAddress replacementAddress:(uint32_t)replacementAddress newLength:(size_t)newLength {
 	const void *buffer = [_data mutableBytes];
 	const uint32_t tableAddress = _isDylib ? (uint32_t)(_cfstringTableSection->addr) : (uint32_t)(_cfstringTableSection->addr - IMAGE_BASE);
 
@@ -108,7 +109,7 @@ struct __CFString {
 	}
 }
 
-- (void)_patchCString:(uint64_t)originalAddress replacementAddress:(uint64_t)replacementAddress {
+- (void)_patchCString:(uint64_t)originalAddress replacementAddress:(uint64_t)replacementAddress oldLength:(size_t)oldLength newLength:(size_t)newLength {
 	const uint8_t *buffer = (const uint8_t *)[_data mutableBytes];
 
     uint64_t registers[32];
@@ -155,6 +156,8 @@ struct __CFString {
 				if (offset >= -ADR_MAX_RANGE && offset <= ADR_MAX_RANGE) {
 					const uint32_t adrInstructionNew = generate_adr(currentRegister, (int)offset);
 					*(uint32_t *)(buffer + i) = OSSwapHostToLittleInt32(adrInstructionNew);
+
+					[self _patchSwiftInstructionForLengthAt:i + (INSTRUCTION_SIZE * 4) oldLength:oldLength newLength:newLength];
 				} else {
 					const uint32_t adrpImmediate = (uint32_t)(((replacementAddress & ~PAGE_OFFSET_MASK) - (i & ~PAGE_OFFSET_MASK)) >> 12);
 					const uint32_t addImmediate = replacementAddress & PAGE_OFFSET_MASK;
@@ -168,12 +171,31 @@ struct __CFString {
 
 					if (i + INSTRUCTION_SIZE < end && nextInstruction == NOP_OPCODE) {
 						*(uint32_t *)(buffer + i + INSTRUCTION_SIZE) = OSSwapHostToLittleInt32(addInstruction);
+
+						[self _patchSwiftInstructionForLengthAt:i + (INSTRUCTION_SIZE * 4) oldLength:oldLength newLength:newLength];
 					} else {
 						fprintf(stderr, "[!] FAILED TO PATCH - Not enough space to write ADD instruction at address 0x%llx\n", i);
 					}
 				}
 			}
 		}
+    }
+}
+
+- (void)_patchSwiftInstructionForLengthAt:(uint64_t)address oldLength:(size_t)oldLength newLength:(size_t)newLength {
+    const uint8_t *buffer = (const uint8_t *)[_data mutableBytes];
+	const uint64_t end = (uint64_t)[_data length] & ~3;
+
+	const uint32_t movLengthInstruction = *(uint32_t *)(buffer + address);
+
+    if ((movLengthInstruction & MOV_MASK) == MOV_OPCODE && address < end) {
+        const uint32_t movImmediate = get_mov_value(movLengthInstruction);
+
+        if (movImmediate == oldLength) {
+			fprintf(stdout, "[+] Patching Swift-specific hardcoded length\n");
+            const uint32_t movRegister = get_mov_register(movLengthInstruction);
+            *(uint32_t *)(buffer + address) = OSSwapHostToLittleInt32(generate_mov(movRegister, newLength));
+        }
     }
 }
 
