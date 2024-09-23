@@ -9,6 +9,7 @@
 #import "Headers/RPMachOModifier.h"
 #import "Headers/RPOldABIChecker.h"
 #import "Headers/RPPlistHandler.h"
+#import "Headers/RPConversionHandler.h"
 #import "Headers/RPControlScriptHandler.h"
 #import "Headers/RPControlHandler.h"
 #import "Headers/RPCodesignHandler.h"
@@ -191,6 +192,16 @@ int main(int argc, char *argv[], char *envp[]) {
 				[dependencies addObject:@"cy+cpu.arm64v8 | oldabi-xina | oldabi"];
 			} else if ([dependencies isKindOfClass:[NSString class]]) {
 				[controlHandler setControlValue:@[dependencies, @"cy+cpu.arm64v8 | oldabi-xina | oldabi"] forKey:@"Depends"];
+			}
+		}
+
+		NSString *const packageIconPath = [controlHandler controlValueForKey:@"Icon"];
+		if (packageIconPath) {
+			RPConversionHandler *const conversionHandler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
+			if ([conversionHandler shouldConvertString:packageIconPath]) {
+				NSString *const convertedPackageIconPath = [conversionHandler convertedStringForString:packageIconPath];
+				fprintf(stdout, "[+] Converting icon path in control file...\n\t%s -> %s\n", packageIconPath.UTF8String, convertedPackageIconPath.UTF8String);
+				[controlHandler setControlValue:packageIconPath forKey:@"Icon"];
 			}
 		}
 

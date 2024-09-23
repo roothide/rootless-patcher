@@ -24,7 +24,7 @@
 		return NO;
 	}
 
-	NSArray *const pathComponents = [string pathComponents];
+	NSArray *const pathComponents = [[self _string:string byStrippingPrefix:@"file://"] pathComponents];
 	if (!pathComponents || [pathComponents count] == 1) {
 		return NO;
 	}
@@ -42,12 +42,6 @@
 		return NO;
 	}
 
-	for (NSString *blacklistedString in _blacklist) {
-		if ([string containsString:blacklistedString]) {
-			return NO;
-		}
-	}
-
 	for (NSString *specialCase in _specialCases) {
 		if ([string containsString:specialCase]) {
 			return YES;
@@ -56,6 +50,12 @@
 
 	if ([string hasPrefix:@"file://"]) {
 		return YES;
+	}
+
+	for (NSString *blacklistedString in _blacklist) {
+		if ([string containsString:blacklistedString]) {
+			return NO;
+		}
 	}
 
 	return YES;
