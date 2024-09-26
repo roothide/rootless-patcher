@@ -77,7 +77,7 @@
 
 	unsigned char *cmds = (unsigned char *)malloc(header->sizeofcmds);
 
-	memcpy(cmds, (unsigned char *)header + sizeof(struct mach_header_64), header->sizeofcmds);
+	memcpy(cmds, header + 1, header->sizeofcmds);
 
 	unsigned char *patch = (unsigned char *)(header + 1) + insertOffset;
 
@@ -104,7 +104,7 @@
         for (uint32_t i = 0; i < llvmSegment->nsects; i++) {
 			sect->offset = sect->offset - llvmSegment->fileoff + newSegment.fileoff + newSegment.filesize;
 			sect->addr = sect->addr - llvmSegment->vmaddr + newSegment.vmaddr + newSegment.vmsize;
-            sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
+            sect = (struct section_64 *)(sect + 1);
         }
 
 		llvmSegment->fileoff = newSegment.fileoff + newSegment.filesize;

@@ -16,7 +16,7 @@
 }
 
 - (struct segment_command_64 *)segmentWithName:(NSString *)segname {
-	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
+	struct load_command *lc = (struct load_command *)(_header + 1);
 
 	for (uint32_t i = 0; i < _header->ncmds; i++) {
 		if (lc->cmd == LC_SEGMENT_64) {
@@ -45,7 +45,7 @@
 			return sect;
 		}
 
-		sect = (struct section_64 *)((uint64_t)sect + sizeof(struct section_64));
+		sect = (struct section_64 *)(sect + 1);
 	}
 
 	return nil;
@@ -54,7 +54,7 @@
 - (uint64_t)vmEnd {
 	uint64_t vmEnd = 0;
 
-	struct load_command *lc = (struct load_command *)((uint64_t)_header + sizeof(struct mach_header_64));
+	struct load_command *lc = (struct load_command *)(_header + 1);
 
 	for (uint32_t i = 0; i < _header->ncmds; i++) {
 		if (lc->cmd == LC_SEGMENT_64) {
