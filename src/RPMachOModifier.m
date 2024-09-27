@@ -118,7 +118,7 @@
 	}
 
 	struct linkedit_data_command *chainedFixups = nil;
-	[self _shiftCommandsWithNewSegment:newSegment chainedFixups:&chainedFixups];
+	[self _shiftCommandsWithOffset:newSegment.filesize chainedFixups:&chainedFixups];
 
 	unsigned char *codepage = (unsigned char *)calloc(newSegment.vmsize, 1);
 	[self _addPatchedStringsFromStringMap:stringMap toCodepage:codepage mappedOffset:newSegment.vmaddr - newSegment.fileoff sectionOffset:newSection.offset];
@@ -156,9 +156,8 @@
 	}
 }
 
-- (void)_shiftCommandsWithNewSegment:(struct segment_command_64)segment chainedFixups:(struct linkedit_data_command **)chainedFixups {
+- (void)_shiftCommandsWithOffset:(uint64_t)fixOffset chainedFixups:(struct linkedit_data_command **)chainedFixups {
 	const struct mach_header_64 *header = (struct mach_header_64 *)[_fileData bytes];
-	const uint64_t fixOffset = segment.filesize;
 
 	struct load_command *lc = (struct load_command *)(header + 1);
 
