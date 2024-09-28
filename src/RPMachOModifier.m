@@ -47,7 +47,7 @@
 		.cmd = LC_SEGMENT_64,
 		.cmdsize = sizeof(struct segment_command_64) + sizeof(struct section_64),
 		.vmaddr = llvmSegment ? llvmSegment->vmaddr : vmEnd,
-		.vmsize = PAGE_SIZE,
+		.vmsize = PAGE_SIZE * [self _pagesNeededForStringMap:stringMap],
 		.fileoff = llvmSegment ? llvmSegment->fileoff : _fileData.length,
 		.filesize = PAGE_SIZE,
 		.maxprot = VM_PROT_READ,
@@ -154,6 +154,18 @@
 		[_replacementOffsetMap setObject:@(sectionOffset + offset + mappedOffset) forKey:patchedStrings[i]];
 		offset += strlen(string) + 1;
 	}
+}
+
+- (NSUInteger)_pagesNeededForStringMap:(NSDictionary<NSString *, NSString *> *)stringMap {
+    NSArray<NSString *> *const patchedStrings = [stringMap allValues];
+    const NSUInteger stringCount = [stringMap count];
+
+    uint64_t totalSize = 0;
+    for (NSUInteger i = 0; i < stringCount; i++) {
+        totalSize += strlen([patchedStrings[i] UTF8String]) + 1;
+    }
+
+    return (totalSize + PAGE_SIZE - 1) / PAGE_SIZE;
 }
 
 - (void)_shiftCommandsWithOffset:(uint64_t)fixOffset chainedFixups:(struct linkedit_data_command **)chainedFixups {
