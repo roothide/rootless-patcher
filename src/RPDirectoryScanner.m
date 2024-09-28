@@ -45,14 +45,27 @@
 	return [files count] ? files : nil;
 }
 
-- (NSArray<NSString *> *)controlScriptFiles {
+- (NSArray<NSString *> *)scriptFiles {
 	__weak typeof(self) weakSelf = self;
+
 	__block NSMutableArray<NSString *> *const files = [NSMutableArray array];
+
+	[self _recursivelyScanDirectory:_directory withBlock:^(NSString *filePath) {
+		NSError *error = nil;
+		NSString *const fileContents = [NSString stringWithContentsOfFile:filePath encoding:NSASCIIStringEncoding error:&error];
+		if (!fileContents) {
+			fprintf(stderr, "[-] Failed to get contents of file: %s. Error: %s\n", filePath.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			return;
+		}
+		if ([fileContents hasPrefix:@"#!"]) {
+			[files addObject:filePath];
+		}
+	}];
 
 	NSArray<NSString *> *const controlScriptNames = @[@"preinst", @"postinst", @"prerm", @"postrm", @"postrmv", @"extrainst", @"triggers"];
 
 	[self _recursivelyScanDirectory:[_directory stringByAppendingPathComponent:@"DEBIAN"] withBlock:^(NSString *filePath) {
-		if ([controlScriptNames containsObject:[filePath lastPathComponent]]) {
+		if (![files containsObject:filePath] && [controlScriptNames containsObject:[filePath lastPathComponent]]) {
 			NSData *const data = [NSData dataWithContentsOfFile:filePath];
 
 			const struct mach_header_64 *const header = (const struct mach_header_64 *)[data bytes];
@@ -63,7 +76,7 @@
 		}
 	}];
 
-	return [files count] ? files : nil;
+	return files;
 }
 
 - (NSString *)controlFile {

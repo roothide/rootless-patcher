@@ -2,7 +2,7 @@
 #import <rootless.h>
 #import <mach-o/loader.h>
 #import "Headers/RPRepackHandler.h"
-#import "Headers/RPScriptHandler.h"
+#import "Headers/RPLoadCommandsHandler.h"
 #import "Headers/RPDirectoryScanner.h"
 #import "Headers/RPMachOThinner.h"
 #import "Headers/RPStringScanner.h"
@@ -10,7 +10,7 @@
 #import "Headers/RPOldABIChecker.h"
 #import "Headers/RPPlistHandler.h"
 #import "Headers/RPConversionHandler.h"
-#import "Headers/RPControlScriptHandler.h"
+#import "Headers/RPScriptHandler.h"
 #import "Headers/RPControlHandler.h"
 #import "Headers/RPCodesignHandler.h"
 #import "Headers/RPMachOMerger.h"
@@ -60,7 +60,7 @@ int main(int argc, char *argv[], char *envp[]) {
 		RPDirectoryScanner *const directoryScanner = [RPDirectoryScanner scannerWithDirectory:patchWorkingDirectory];
 		NSArray<NSString *> *const machOFiles = [directoryScanner machOFiles];
 		NSArray<NSString *> *const plistFiles = [directoryScanner plistFiles];
-		NSArray<NSString *> *const controlScriptFiles = [directoryScanner controlScriptFiles];
+		NSArray<NSString *> *const scriptFiles = [directoryScanner scriptFiles];
 		NSString *const controlFile = [directoryScanner controlFile];
 
 		NSDictionary *const allThinnedMachOs = [RPMachOThinner thinnedMachOsFromPaths:machOFiles];
@@ -144,7 +144,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
 			fprintf(stdout, "[+] Checking if %s has entitlements... %s\n", fatMachO.fileSystemRepresentation, hasEntitlements ? "YES" : "NO");
 
-			const BOOL handleScript = [RPScriptHandler handleScriptForFile:fatMachO];
+			const BOOL handleScript = [RPLoadCommandsHandler handleLoadCommandsForFile:fatMachO];
 			if (!handleScript) {
 				fprintf(stderr, "[-] Failed to handle script for file: %s\n", fatMachO.fileSystemRepresentation);
 				break;
@@ -251,36 +251,36 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		fprintf(stdout, "[+] Finishing plist file portion...\n");
 
-		fprintf(stdout, "[+] Starting control script file portion...\n");
+		fprintf(stdout, "[+] Starting script file portion...\n");
 
 		error = nil;
-		for (NSString *controlScriptFile in controlScriptFiles) {
-			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:controlScriptFile error:&error];
+		for (NSString *scriptFile in scriptFiles) {
+			NSDictionary<NSFileAttributeKey, id> *const fileAttributes = [fileManager attributesOfItemAtPath:scriptFile error:&error];
 			if (!fileAttributes) {
-				fprintf(stderr, "[-] Failed to get file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				fprintf(stderr, "[-] Failed to get file attributes for script file: %s. Error: %s\n", scriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
-			RPControlScriptHandler *const handler = [RPControlScriptHandler handlerWithControlScriptFile:controlScriptFile];
+			RPScriptHandler *const handler = [RPScriptHandler handlerWithScriptFile:scriptFile];
 			[handler convertStringsUsingConversionRuleset:conversionRuleset];
 
 			error = nil;
 			NSString *const convertedFileContents = [handler fileContents];
-			const BOOL writeSuccess = [convertedFileContents writeToFile:controlScriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
+			const BOOL writeSuccess = [convertedFileContents writeToFile:scriptFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
 			if (!writeSuccess) {
-				fprintf(stderr, "[-] Failed to write to file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				fprintf(stderr, "[-] Failed to write to file: %s. Error: %s\n", scriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 
 			error = nil;
-			const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:controlScriptFile error:&error];
+			const BOOL attributeSetSuccess = [fileManager setAttributes:fileAttributes ofItemAtPath:scriptFile error:&error];
 			if (!attributeSetSuccess) {
-				fprintf(stderr, "[-] Failed to set file attributes for control script file: %s. Error: %s\n", controlScriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+				fprintf(stderr, "[-] Failed to set file attributes for script file: %s. Error: %s\n", scriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				break;
 			}
 		}
 
-		fprintf(stdout, "[+] Finishing control script file portion...\n");
+		fprintf(stdout, "[+] Finishing script file portion...\n");
 
 		NSArray<NSString *> *const controlPathComponents = [controlFile pathComponents];
 		NSString *const debianPath = [patchWorkingDirectory stringByAppendingPathComponent:@"DEBIAN"];
@@ -290,11 +290,11 @@ int main(int argc, char *argv[], char *envp[]) {
 			fprintf(stdout, "\n[!] IMPORTANT: Starting a hacky fix for certain tweaks that contain an improper DEBIAN directory structure. This is done in order for dpkg-deb to properly build the .deb.\nThe control container (which should end with DEBIAN), is actually: %s\n\n", controlContainer.fileSystemRepresentation);
 			error = nil;
 
-			for (NSString *controlScriptFile in controlScriptFiles) {
+			for (NSString *scriptFile in scriptFiles) {
 				error = nil;
-				const BOOL moveSuccess = [fileManager moveItemAtPath:controlScriptFile toPath:[debianPath stringByAppendingPathComponent:[controlScriptFile lastPathComponent]] error:&error];
+				const BOOL moveSuccess = [fileManager moveItemAtPath:scriptFile toPath:[debianPath stringByAppendingPathComponent:[scriptFile lastPathComponent]] error:&error];
 				if (!moveSuccess) {
-					fprintf(stderr, "[-] Failed to move control script to path: %s. Error: %s\n", debianPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
+					fprintf(stderr, "[-] Failed to move script to path: %s. Error: %s\n", debianPath.fileSystemRepresentation, error.localizedDescription.UTF8String);
 				}
 			}
 

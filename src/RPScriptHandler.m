@@ -1,25 +1,68 @@
 #import <Foundation/Foundation.h>
-#import <rootless.h>
 #import "Headers/RPScriptHandler.h"
-#import "Headers/RPSpawnHandler.h"
+#import "Headers/RPConversionHandler.h"
 
-@implementation RPScriptHandler
+@implementation RPScriptHandler {
+	NSString *_fileContents;
+}
 
-+ (BOOL)handleScriptForFile:(NSString *)file {
-	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
++ (instancetype)handlerWithScriptFile:(NSString *)scriptFile {
+	RPScriptHandler *const handler = [RPScriptHandler new];
 
-	const int scriptStatus = [RPSpawnHandler spawnWithArguments:@[
-		@"sh",
-		scriptPath,
-		file
-	]];
-
-	if (scriptStatus != 0) {
-		fprintf(stderr, "[-] Failed to execute script: %s\n", scriptPath.fileSystemRepresentation);
-		return NO;
+	if (handler) {
+		NSError *error = nil;
+		handler->_fileContents = [NSString stringWithContentsOfFile:scriptFile encoding:NSUTF8StringEncoding error:&error];
+		if (!handler->_fileContents) {
+			fprintf(stderr, "[-] Failed to get script file contents at path: %s. Error: %s\n", scriptFile.fileSystemRepresentation, error.localizedDescription.UTF8String);
+			return nil;
+		}
 	}
 
-	return YES;
+	return handler;
+}
+
+- (void)convertStringsUsingConversionRuleset:(NSDictionary<NSString *, NSString *> *)conversionRuleset {
+	RPConversionHandler *const handler = [RPConversionHandler handlerWithConversionRuleset:conversionRuleset];
+
+	NSArray *const separatedComponents = [_fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \n\"={}"]];
+	NSMutableDictionary *const convertedStrings = [NSMutableDictionary dictionary];
+
+	const NSUInteger separatedComponentsCount = [separatedComponents count];
+
+	for (NSUInteger i = 0; i < separatedComponentsCount; i++) {
+		NSString *const string = [separatedComponents objectAtIndex:i];
+
+		if (![string length]) {
+			continue;
+		}
+
+		// Do not convert shebang, intended behavior on rootless is for the old rootful paths to work.
+		if ([string hasPrefix:@"#!"]) {
+			continue;
+		}
+
+		NSString *stringToConvert = string;
+		if ([stringToConvert characterAtIndex:[stringToConvert length] - 1] == '\\') {
+			stringToConvert = [string stringByAppendingString:[NSString stringWithFormat:@" %@", [separatedComponents objectAtIndex:i + 1]]];
+		}
+
+		if ([handler shouldConvertString:stringToConvert]) {
+			NSString *const convertedString = [handler convertedStringForString:stringToConvert];
+			[convertedStrings setObject:convertedString forKey:stringToConvert];
+		}
+	}
+
+	for (NSString *originalString in convertedStrings) {
+		NSString *const convertedString = [convertedStrings valueForKey:originalString];
+
+		if (![_fileContents containsString:convertedString]) {
+			_fileContents = [_fileContents stringByReplacingOccurrencesOfString:originalString withString:[convertedStrings valueForKey:originalString]];
+		}
+	}
+}
+
+- (NSString *)fileContents {
+	return _fileContents;
 }
 
 @end
