@@ -43,13 +43,15 @@
 	NSData *const endData = [_fileData subdataWithRange:endRange];
 	[_fileData replaceBytesInRange:endRange withBytes:nil length:0];
 
+	const NSUInteger pagesNeeded = [self _pagesNeededForStringMap:stringMap];
+
 	const struct segment_command_64 newSegment = {
 		.cmd = LC_SEGMENT_64,
 		.cmdsize = sizeof(struct segment_command_64) + sizeof(struct section_64),
 		.vmaddr = llvmSegment ? llvmSegment->vmaddr : vmEnd,
-		.vmsize = PAGE_SIZE * [self _pagesNeededForStringMap:stringMap],
+		.vmsize = PAGE_SIZE * pagesNeeded,
 		.fileoff = llvmSegment ? llvmSegment->fileoff : _fileData.length,
-		.filesize = PAGE_SIZE,
+		.filesize = PAGE_SIZE * pagesNeeded,
 		.maxprot = VM_PROT_READ,
 		.initprot = VM_PROT_READ,
 		.nsects = 1
