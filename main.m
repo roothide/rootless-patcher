@@ -16,7 +16,7 @@
 #import "Headers/RPMachOMerger.h"
 #import "Headers/RPSpawnHandler.h"
 
-int main(int argc, char *argv[], char *envp[]) {
+int main(int argc, char *argv[]) {
 	@autoreleasepool {
 		if (argc != 2) {
 			fprintf(stdout, "\n");
