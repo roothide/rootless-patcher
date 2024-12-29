@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <Foundation/Foundation.h>
 #import "Headers/RPScriptHandler.h"
 #import "Headers/RPConversionHandler.h"

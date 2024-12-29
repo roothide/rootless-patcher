@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <Foundation/Foundation.h>
 #import "Headers/RPStringScanner.h"
 #import "Headers/RPMachOParser.h"

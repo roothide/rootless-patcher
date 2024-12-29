@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <Foundation/Foundation.h>
 #import <rootless.h>
 #import <mach-o/loader.h>

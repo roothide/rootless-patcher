@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #include "Headers/assembler.h"
 
 uint32_t generate_adrp(int destination_register, int immediate) {

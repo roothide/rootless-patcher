@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <spawn.h>
 #import <Foundation/Foundation.h>
 #import "Headers/RPSpawnHandler.h"

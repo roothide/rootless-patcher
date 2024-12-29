@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <Foundation/NSObject.h>
 #import <Foundation/NSData.h>
 

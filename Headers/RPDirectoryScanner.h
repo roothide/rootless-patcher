@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Nightwind
+
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSDictionary.h>
@@ -7,7 +9,6 @@
 - (nullable NSArray<NSString *> *)machOFiles;
 - (nullable NSArray<NSString *> *)plistFiles;
 - (nullable NSArray<NSString *> *)scriptFiles;
-// - (nullable NSArray<NSString *> *)controlScriptFiles;
 - (nullable NSString *)controlFile;
 
 + (nullable instancetype)new __attribute__((unavailable("Use +scannerWithDirectory: instead")));

@@ -1,3 +1,6 @@
+// Copyright (c) 2024 Nightwind
+
+
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSDictionary.h>
