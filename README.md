@@ -21,6 +21,8 @@ A CLI rootful to rootless patcher. Utilizes a technique that does not require Xi
 	- iOS rootless: `make clean package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless TARGET_OS=ios`
 	- iOS rootful: `make clean package FINALPACKAGE=1 TARGET_OS=ios`
 	- macOS: `make clean package FINALPACKAGE=1 TARGET_OS=macos`
+#### Writeup
+In order to document how this project works and the challenges that came along with developing it, I've written a [writeup](WRITEUP.md).
 #### License
 This project is licensed under [MIT](LICENSE).
 ###### Copyright (c) 2024 Nightwind
