@@ -53,5 +53,6 @@ XenHTML also has an improper `DEBIAN` directory format, which was discovered dur
 ### Credits
 - Big thanks to [staturnz](https://github.com/staturnzz) for help in the [RPStringPatcher.m](src/RPStringPatcher.m) part of the project. Without him, this project would not have been possible.
 - Thanks to [opa334](https://github.com/opa334) for the initial idea on how to implement the patcher.
+- Thanks to [Leptos](https://github.com/leptos-null) for reviewing the code to help make it as reliable as possible.
 - Thanks to [tuancc](https://github.com/roothider) for help in regard to some of the technicalities.
 - Thanks to the testers who tested the patcher with many tweaks, helping round out some of the edge cases!
