@@ -1,19 +1,19 @@
 // Copyright (c) 2024 Nightwind
 
 #import <Foundation/Foundation.h>
-#import <rootless.h>
+#import <roothide.h>
 #import "Headers/RPLoadCommandsHandler.h"
 #import "Headers/RPSpawnHandler.h"
 
 @implementation RPLoadCommandsHandler
 
 + (BOOL)handleLoadCommandsForFile:(NSString *)file {
-	NSString *const scriptPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
+	NSString *const scriptPath = jbroot(@"/Library/Application Support/rootless-patcher/repack-rootless.sh");
 
 	const int scriptStatus = [RPSpawnHandler spawnWithArguments:@[
 		@"sh",
-		scriptPath,
-		file
+		rootfs(scriptPath),
+		rootfs(file)
 	]];
 
 	if (scriptStatus != 0) {

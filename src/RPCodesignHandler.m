@@ -1,5 +1,6 @@
 // Copyright (c) 2024 Nightwind
 
+#include <roothide.h>
 #import <Foundation/Foundation.h>
 #import "Headers/RPCodesignHandler.h"
 #import "Headers/RPSpawnHandler.h"
@@ -10,7 +11,7 @@
 	return [RPSpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-r",
-		file
+		rootfs(file)
 	]];
 }
 
@@ -18,7 +19,7 @@
 	return [RPSpawnHandler spawnWithArguments:@[
 		@"ldid",
 		@"-S",
-		file
+		rootfs(file)
 	]];
 }
 
@@ -26,7 +27,7 @@
 	return [RPSpawnHandler spawnWithArguments:@[
 		@"ldid",
 		[@"-S" stringByAppendingString:entitlementsPath],
-		file
+		rootfs(file)
 	]];
 }
 

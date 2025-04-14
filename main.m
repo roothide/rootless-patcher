@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Nightwind
 
 #import <Foundation/Foundation.h>
-#import <rootless.h>
+#import <roothide.h>
 #import <mach-o/loader.h>
 #import "Headers/RPRepackHandler.h"
 #import "Headers/RPLoadCommandsHandler.h"
@@ -28,6 +28,17 @@ int main(int argc, char *argv[]) {
 
 			return EXIT_FAILURE;
 		}
+		
+#ifdef THEOS_PACKAGE_SCHEME_ROOTHIDE
+		NSMutableSet<NSString *> *newPaths = [[NSMutableSet alloc] init];
+		NSArray<NSString *> *paths = [@(getenv("PATH")) componentsSeparatedByString:@":"];
+		for (NSString *path in paths) {
+			[newPaths addObject:path];
+			[newPaths addObject:jbroot(path)];
+		}
+		NSString *newPathEnv = [newPaths.allObjects componentsJoinedByString:@":"];
+		setenv("PATH", newPathEnv.UTF8String, 1);
+#endif
 
 		fprintf(stdout, "\n[+] Starting rootless-patcher...\n\n");
 
@@ -46,7 +57,11 @@ int main(int argc, char *argv[]) {
 		}
 
 		isDirectory = NO;
+#ifdef THEOS_PACKAGE_SCHEME_ROOTHIDE
+		NSString *const debPath = [NSString stringWithUTF8String:jbroot(argv[1])];
+#else
 		NSString *const debPath = [NSString stringWithUTF8String:argv[1]];
+#endif
 		if (!debPath || ![fileManager fileExistsAtPath:debPath isDirectory:&isDirectory] || isDirectory) {
 			fprintf(stderr, "[-] Cannot find file at path: %s\n", debPath.fileSystemRepresentation);
 			return EXIT_FAILURE;
@@ -67,7 +82,7 @@ int main(int argc, char *argv[]) {
 
 		NSDictionary *const allThinnedMachOs = [RPMachOThinner thinnedMachOsFromPaths:machOFiles];
 
-		NSString *const conversionRulesetPath = ROOT_PATH_NS(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
+		NSString *const conversionRulesetPath = jbroot(@"/Library/Application Support/rootless-patcher/ConversionRuleset.json");
 		NSData *const conversionRulesetData = [NSData dataWithContentsOfFile:conversionRulesetPath];
 
 		error = nil;
@@ -88,7 +103,7 @@ int main(int argc, char *argv[]) {
 			const int entitlementsSuccess = [RPSpawnHandler spawnWithArguments:@[
 				@"ldid",
 				@"-e",
-				fatMachO
+				rootfs(fatMachO)
 			] stdoutPath:entitlementsPath stderrPath:nil];
 
 			if (entitlementsSuccess != 0) {
@@ -329,8 +344,8 @@ int main(int argc, char *argv[]) {
 		const int buildStatus = [RPSpawnHandler spawnWithArguments:@[
 			@"dpkg-deb",
 			@"-b",
-			patchWorkingDirectory,
-			newPath
+			rootfs(patchWorkingDirectory),
+			rootfs(newPath)
 		]];
 
 		error = nil;

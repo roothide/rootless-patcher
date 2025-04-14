@@ -1,5 +1,6 @@
 // Copyright (c) 2024 Nightwind
 
+#include <roothide.h>
 #import <Foundation/Foundation.h>
 #import "Headers/RPRepackHandler.h"
 #import "Headers/RPSpawnHandler.h"
@@ -14,8 +15,8 @@
 	const int unpackStatus = [RPSpawnHandler spawnWithArguments:@[
 		@"dpkg-deb",
 		@"-R",
-		file,
-		oldWorkingDirectory
+		rootfs(file),
+		rootfs(oldWorkingDirectory)
 	]];
 
 	if (unpackStatus != 0) {
