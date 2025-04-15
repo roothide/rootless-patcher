@@ -1,5 +1,5 @@
 #!/bin/sh
 if [ -d /var/mobile/Library/Filza/scripts ]; then
 	echo "Adding rootless-patcher.script to Filza's scripts directory."
-	echo "rootless-patcher \"\$1\"" > /var/mobile/Library/Filza/scripts/rootless-patcher.script
+	echo "/usr/local/bin/rootless-patcher \"\$1\"" > /var/mobile/Library/Filza/scripts/rootless-patcher.script
 fi
